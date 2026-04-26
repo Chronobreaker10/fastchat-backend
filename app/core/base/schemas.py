@@ -10,3 +10,28 @@ class Token(BaseModel):
 
 class TokenData(BaseModel):
     user_id: Annotated[int, Field(ge=1, title="ID", description="ID")]
+
+
+class UserAuth(BaseModel):
+    username: Annotated[
+        str,
+        Field(
+            min_length=3,
+            max_length=100,
+            title="Имя пользователя",
+            description="Учетное имя пользователя",
+        ),
+    ]
+    password: Annotated[
+        str,
+        Field(
+            min_length=3,
+            max_length=100,
+            title="Пароль пользователя",
+            description="Пароль пользователя",
+        ),
+    ]
+
+
+class Message(BaseModel):
+    message: str

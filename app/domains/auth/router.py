@@ -1,9 +1,8 @@
 from typing import Annotated
 
-from core.base.schemas import Token
+from core.base.schemas import Token, UserAuth
 from core.config import settings
-from fastapi import APIRouter, Body, Depends, Response
-from fastapi.security import OAuth2PasswordRequestForm
+from fastapi import APIRouter, Body, Form, Response
 
 from domains.auth.dependencies import AuthServiceDep
 from domains.users.schemas import UserCreate
@@ -16,7 +15,7 @@ router = APIRouter(
 
 @router.post("/token", response_model=Token)
 async def login_user(
-    form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
+    form_data: Annotated[UserAuth, Form()],
     auth_service: AuthServiceDep,
     response: Response,
 ) -> Token:

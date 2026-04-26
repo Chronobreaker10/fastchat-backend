@@ -1,9 +1,9 @@
 from datetime import UTC, datetime, timedelta
 
 import jwt
+from domains.auth.errors import UnauthorizedError
 from pwdlib import PasswordHash
 
-from core.base.errors import UnauthorizedError
 from core.base.schemas import TokenData
 from core.config import settings
 

@@ -7,7 +7,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class RunConfig(BaseModel):
     scheme: str = "http"
     host: str = "localhost"
-    port: int = 8080
+    port: int = 8000
 
 
 class DatabaseConfig(BaseModel):

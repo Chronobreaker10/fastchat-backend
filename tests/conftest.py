@@ -20,6 +20,12 @@ async def setup_database() -> None:
         await connection.run_sync(Base.metadata.create_all)
 
 
+@pytest.fixture
+async def clear_database() -> None:
+    async with test_engine.begin() as connection:
+        await connection.run_sync(Base.metadata.drop_all)
+
+
 @pytest.fixture(name="session", scope="session")
 async def get_session_override() -> AsyncGenerator[AsyncSession]:
     async with session_factory() as session:

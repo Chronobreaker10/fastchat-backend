@@ -1,9 +1,10 @@
 from typing import Annotated
 
 from core.dependencies import SessionDep
-from fastapi import Depends
+from fastapi import Cookie, Depends, Header
 from fastapi.security import OAuth2PasswordBearer
 
+from domains.auth.errors import UnauthorizedError
 from domains.auth.service import AuthService
 from domains.users.repository import UserRepository
 from domains.users.schemas import UserRead
@@ -19,8 +20,20 @@ async def get_auth_service(
 
 
 async def get_current_user(
-    token: Annotated[str, Depends(oauth2_scheme)], auth_service: AuthServiceDep
+    auth_service: AuthServiceDep,
+    auth_header: Annotated[str | None, Header(alias="Authorization")] = None,
+    auth_cookie: Annotated[str | None, Cookie(alias="access_token")] = None,
 ) -> UserRead:
+    token = None
+    if auth_header:
+        token_data = auth_header.split()
+        if len(token_data) > 1 or token_data[0] != "Bearer":
+            raise UnauthorizedError
+        token = token_data[1]
+    elif auth_cookie:
+        token = auth_cookie
+    if token is None:
+        raise UnauthorizedError
     return await auth_service.get_user_from_token(token)
 
 

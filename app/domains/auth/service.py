@@ -1,4 +1,3 @@
-from core.base.errors import InvalidCredentialsError
 from core.base.schemas import Token
 from core.config import settings
 from core.security import (
@@ -9,6 +8,7 @@ from core.security import (
 )
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from domains.auth.errors import InvalidCredentialsError
 from domains.users.repository import UserRepository
 from domains.users.schemas import UserCreate, UserDB, UserRead
 

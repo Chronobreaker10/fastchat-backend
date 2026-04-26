@@ -24,7 +24,9 @@ class Message(Base):
     )
     author_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
 
-    author: Mapped[User] = relationship(back_populates="messages")
+    author: Mapped[User] = relationship(
+        back_populates="user_messages", foreign_keys=[author_id]
+    )
     chat: Mapped[Chat] = relationship(back_populates="messages")
     created_at: Mapped[datetime] = mapped_column(
         default=get_current_naive_dt, server_default=func.now()

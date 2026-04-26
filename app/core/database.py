@@ -96,3 +96,7 @@ class DatabaseHelper:
 
 
 db_helper = DatabaseHelper.from_settings(settings)
+
+from domains.users.models import User  # noqa
+from domains.messages.models import Message  # noqa
+from domains.chats.models import Chat, ChatUser  # noqa

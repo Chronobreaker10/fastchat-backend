@@ -19,12 +19,15 @@ class Chat(Base):
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
     name: Mapped[str] = mapped_column(String(100))
 
-    chat_users: Mapped[list[ChatUser]] = relationship(
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
+
+    members: Mapped[list[ChatUser]] = relationship(
         back_populates="chat", passive_deletes=True
     )
     messages: Mapped[list[Message]] = relationship(
         back_populates="chat", passive_deletes=True
     )
+    creator: Mapped[User] = relationship(back_populates="created_chats")
     created_at: Mapped[datetime] = mapped_column(
         default=get_current_naive_dt, server_default=func.now()
     )
@@ -39,8 +42,8 @@ class ChatUser(Base):
         ForeignKey("chats.id", ondelete="CASCADE")
     )
 
-    user: Mapped[User] = relationship(back_populates="user_chats")
-    chat: Mapped[Chat] = relationship(back_populates="chat_users")
+    user: Mapped[User] = relationship(back_populates="chats")
+    chat: Mapped[Chat] = relationship(back_populates="members")
     joined_at: Mapped[datetime] = mapped_column(
         default=get_current_naive_dt, server_default=func.now()
     )
