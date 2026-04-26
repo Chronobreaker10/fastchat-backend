@@ -1,14 +1,14 @@
-from core.base.schemas import Token
 from core.config import settings
-from core.security import (
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from domains.auth.errors import InvalidCredentialsError
+from domains.auth.schemas import Token
+from domains.auth.security import (
     create_access_token,
     get_password_hash,
     validate_token,
     verify_password,
 )
-from sqlalchemy.ext.asyncio import AsyncSession
-
-from domains.auth.errors import InvalidCredentialsError
 from domains.users.repository import UserRepository
 from domains.users.schemas import UserCreate, UserDB, UserRead
 

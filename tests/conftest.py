@@ -4,6 +4,8 @@ from typing import Any
 import pytest
 from core.base.models import Base
 from core.database import db_helper
+from domains.auth.security import get_password_hash
+from domains.users.models import User
 from httpx import ASGITransport, AsyncClient
 from main import app
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
@@ -43,3 +45,26 @@ async def test_client(session: AsyncSession) -> AsyncGenerator[AsyncClient, Any]
     ) as client:
         yield client
     app.dependency_overrides.clear()
+
+
+@pytest.fixture(scope="function", name="test_user")
+async def create_test_user(
+    session: AsyncSession, setup_database: None
+) -> AsyncGenerator[User, Any]:
+    password = get_password_hash("secret")
+    test_user = User(username="test_user", hashed_password=password)
+    session.add(test_user)
+    await session.commit()
+    try:
+        yield test_user
+    finally:
+        await session.delete(test_user)
+        await session.commit()
+
+
+@pytest.fixture(name="access_token")
+async def login_user(client: AsyncClient, test_user: User) -> str:
+    response = await client.post(
+        "/auth/token", data={"username": "test_user", "password": "secret"}
+    )
+    return response.json()["access_token"]

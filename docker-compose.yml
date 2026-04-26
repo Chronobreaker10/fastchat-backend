@@ -8,7 +8,6 @@ services:
     volumes:
       - .:/app
       - /app/.venv
-      - /app/logs
     depends_on:
       - postgres
     ports:

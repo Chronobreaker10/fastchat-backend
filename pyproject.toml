@@ -28,6 +28,11 @@ dev = [
 minversion = "9.0"
 asyncio_mode = "auto"
 pythonpath = ["app"]
+markers = [
+    "chat",
+    "user",
+    "auth",
+]
 
 
 [tool.ruff]

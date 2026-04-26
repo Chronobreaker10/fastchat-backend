@@ -1,8 +1,10 @@
+import pytest
 from domains.users.models import User
 from fastapi import status
 from httpx import AsyncClient
 
 
+@pytest.mark.user
 async def test_get_user_by_username(client: AsyncClient, test_user: User) -> None:
     test_username = "test_user"
     response = await client.get(f"/users/{test_username}")
@@ -10,6 +12,7 @@ async def test_get_user_by_username(client: AsyncClient, test_user: User) -> Non
     assert response.json()["username"] == test_username
 
 
+@pytest.mark.user
 async def test_get_not_exists_user(client: AsyncClient, test_user: User) -> None:
     test_username = "not_exists_user"
     response = await client.get(f"/users/{test_username}")

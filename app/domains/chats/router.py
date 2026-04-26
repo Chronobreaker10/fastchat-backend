@@ -16,7 +16,9 @@ async def create_chat(
     current_user: CurrentUserDep, service: ChatServiceDep, data: ChatCreate
 ) -> Message:
     chat = await service.create_chat(current_user.id, data)
-    return Message(message=f"Чат {chat.name} успешно создан!")
+    return Message(
+        message=f"Чат {chat.name} успешно создан!", details={"chat_id": chat.id}
+    )
 
 
 @router.get("/", response_model=list[ChatRead])

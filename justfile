@@ -16,4 +16,4 @@ set shell := ["powershell", "-c"]
     uv run pytest
 
 @docker:
-    docker compose up -d
+    docker-compose up -d

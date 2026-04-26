@@ -1,10 +1,10 @@
 from typing import Annotated
 
-from core.base.schemas import Token, UserAuth
 from core.config import settings
 from fastapi import APIRouter, Body, Form, Response
 
 from domains.auth.dependencies import AuthServiceDep
+from domains.auth.schemas import Token, UserAuth
 from domains.users.schemas import UserCreate
 
 router = APIRouter(

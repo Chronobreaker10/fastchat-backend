@@ -27,7 +27,8 @@ async def get_current_user(
     token = None
     if auth_header:
         token_data = auth_header.split()
-        if len(token_data) > 1 or token_data[0] != "Bearer":
+        token_data_count = 2
+        if len(token_data) < token_data_count or token_data[0] != "Bearer":
             raise UnauthorizedError
         token = token_data[1]
     elif auth_cookie:

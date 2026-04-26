@@ -1,11 +1,11 @@
 from datetime import UTC, datetime, timedelta
 
 import jwt
-from domains.auth.errors import UnauthorizedError
+from core.config import settings
 from pwdlib import PasswordHash
 
-from core.base.schemas import TokenData
-from core.config import settings
+from domains.auth.errors import UnauthorizedError
+from domains.auth.schemas import TokenData
 
 password_hash = PasswordHash.recommended()
 
