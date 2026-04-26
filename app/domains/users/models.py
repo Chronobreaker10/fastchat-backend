@@ -9,6 +9,7 @@ from domains.shared.utils import get_current_naive_dt
 
 if TYPE_CHECKING:
     from domains.chats.models import ChatUser
+    from domains.messages.models import Message
 
 
 class User(Base):
@@ -18,7 +19,12 @@ class User(Base):
     username: Mapped[str] = mapped_column(String(100), unique=True)
     hashed_password: Mapped[str] = mapped_column(String(100))
 
-    chat_users: Mapped[list[ChatUser]] = relationship(back_populates="user", passive_deletes=True)
+    chat_users: Mapped[list[ChatUser]] = relationship(
+        back_populates="user", passive_deletes=True
+    )
+    messages: Mapped[list[Message]] = relationship(
+        back_populates="author", passive_deletes=True
+    )
     created_at: Mapped[datetime] = mapped_column(
         default=get_current_naive_dt, server_default=func.now()
     )
