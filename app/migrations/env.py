@@ -5,6 +5,7 @@ from alembic import context
 from core.base.models import Base
 from core.config import settings
 from domains.users.models import User  # noqa
+from domains.chats.models import Chat, ChatUser  # noqa
 from sqlalchemy import pool
 from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config
