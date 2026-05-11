@@ -15,12 +15,16 @@ async def lifespan(_: FastAPI) -> AsyncGenerator[None, Any]:
     yield
 
 
-app = FastAPI(lifespan=lifespan)
+app = FastAPI(
+    lifespan=lifespan,
+    title=settings.api_config.title,
+    description=settings.api_config.description,
+    version=settings.api_config.version,
+)
 
 setup_routes(app)
 setup_exceptions(app)
 setup_middlewares(app)
-
 
 if __name__ == "__main__":
     uvicorn.run(app, host=settings.run_config.host, port=settings.run_config.port)

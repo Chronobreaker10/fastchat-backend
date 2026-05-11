@@ -16,3 +16,8 @@ class InvalidCredentialsError(BaseHTTPError):
 
     def __init__(self) -> None:
         self.headers = {"WWW-Authenticate": "Bearer"}
+
+
+class ForbiddenError(BaseHTTPError):
+    code: int = status.HTTP_403_FORBIDDEN
+    message: str = "У вас недостаточно прав для выполнения этого действия"

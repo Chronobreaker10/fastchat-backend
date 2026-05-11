@@ -17,3 +17,12 @@ set shell := ["powershell", "-c"]
 
 @docker:
     docker-compose up -d
+
+@docker-down:
+    docker-compose down
+
+@migrate:
+    docker exec promo_service uv run alembic upgrade head
+
+@migrate-create message:
+    docker exec promo_service uv run alembic revision --autogenerate -m "{{message}}"

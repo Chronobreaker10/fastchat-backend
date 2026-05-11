@@ -19,6 +19,16 @@ class ChatCreate(ChatBase):
     pass
 
 
+class ChatUpdate(ChatBase):
+    name: Annotated[
+        str | None,
+        Field(min_length=3, max_length=100, title="Имя чата", description="Имя чата"),
+    ] = None
+    user_id: Annotated[
+        int | None, Field(ge=1, title="ID владельца", alias="owner_id")
+    ] = None
+
+
 class ChatCreateInDB(ChatCreate):
     user_id: int
 

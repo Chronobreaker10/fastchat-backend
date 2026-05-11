@@ -1,6 +1,6 @@
 from typing import Annotated
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, SecretStr
 
 
 class Token(BaseModel):
@@ -23,7 +23,7 @@ class UserAuth(BaseModel):
         ),
     ]
     password: Annotated[
-        str,
+        SecretStr,
         Field(
             min_length=3,
             max_length=100,

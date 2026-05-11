@@ -10,3 +10,8 @@ class ChatNotFoundError(BaseHTTPError):
 class AlreadyMemberChatError(BaseHTTPError):
     code: int = status.HTTP_409_CONFLICT
     message: str = "Пользователь уже добавлен в чат"
+
+
+class AlreadyNotMemberChatError(BaseHTTPError):
+    code: int = status.HTTP_404_NOT_FOUND
+    message: str = "Пользователя нет в этом чате"

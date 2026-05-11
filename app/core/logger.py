@@ -8,6 +8,8 @@ LOG_DEFAULT_FORMAT = (
     "[%(asctime)s.%(msecs)03d] %(module)10s:%(lineno)-3d %(levelname)-7s - %(message)s"
 )
 
+logging.basicConfig(level=logging.INFO)
+
 
 def setup_logger(
     file_name: str, level: int = logging.INFO, log_format: str | None = None
@@ -29,4 +31,4 @@ def setup_logger(
 
 
 app_errors_logger = setup_logger("app_errors", logging.ERROR, LOG_DEFAULT_FORMAT)
-access_logger = setup_logger("access", logging.WARNING)
+access_logger = setup_logger("access")

@@ -25,7 +25,7 @@ class AccessLogMiddleware(BaseHTTPMiddleware):
                 f'{status_code} - "-" "{request.headers.get("user-agent", "-")}" '
                 f"{process_time:.3f}s"
             )
-            access_logger.warning(log_message)
+            access_logger.info(log_message)
 
 
 def setup_middlewares(app: FastAPI) -> None:

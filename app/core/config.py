@@ -4,6 +4,13 @@ from pydantic import BaseModel, PostgresDsn
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
+class ApiConfig(BaseModel):
+    version: str = "1.0.0"
+    prefix: str = "/api/v1"
+    title: str = "FastChat API"
+    description: str = "API для приложения мессенджера Fast Chat"
+
+
 class RunConfig(BaseModel):
     scheme: str = "http"
     host: str = "localhost"
@@ -29,9 +36,10 @@ class SecurityConfig(BaseModel):
 class Settings(BaseSettings):
     database: DatabaseConfig
     security: SecurityConfig
-    env: Literal["prod", "dev", "test"]
+    env: Literal["prod", "dev", "test"] = "dev"
     default_limit: int = 100
     run_config: RunConfig = RunConfig()
+    api_config: ApiConfig = ApiConfig()
     model_config = SettingsConfigDict(
         env_file=(".env.template", ".env"),
         case_sensitive=False,

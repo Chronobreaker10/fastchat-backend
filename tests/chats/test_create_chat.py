@@ -18,7 +18,7 @@ async def test_create_chat(
         json={"name": chat_name},
         headers={"Authorization": f"Bearer {access_token}"},
     )
-    assert response.status_code == status.HTTP_200_OK
+    assert response.status_code == status.HTTP_201_CREATED
     assert chat_name in response.json()["message"]
     assert response.json()["details"]["chat_id"]
     await session.execute(
