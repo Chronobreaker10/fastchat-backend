@@ -1,7 +1,7 @@
 [project]
-name = "fastapi-uv-template"
-version = "0.1.0"
-description = "Шаблон стартового проекта FastAPI с авторизацией"
+name = "fastchat-api"
+version = "1.0.0"
+description = "API для приложения мессенджера Fast Chat"
 requires-python = ">=3.14"
 dependencies = [
     "alembic>=1.18.4",

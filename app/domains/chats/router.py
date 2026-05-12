@@ -70,7 +70,8 @@ async def delete_chat(
 async def add_member(
     chat_id: Annotated[uuid.UUID, Path(title="UUID чата")],
     username: Annotated[
-        str, Body(title="Имя нового участника", min_length=3, max_length=100)
+        str,
+        Body(title="Имя нового участника", min_length=3, max_length=100, embed=True),
     ],
     current_user: CurrentUserDep,
     service: ChatServiceDep,

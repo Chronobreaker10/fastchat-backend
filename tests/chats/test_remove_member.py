@@ -1,5 +1,3 @@
-import random
-import string
 import uuid
 
 import pytest
@@ -12,16 +10,20 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 
 @pytest.mark.chat
-async def test_add_member(
+async def test_remove_member(
     client: AsyncClient,
     session: AsyncSession,
     access_token: str,
     member: User,
     test_chat: Chat,
 ) -> None:
-    response = await client.post(
+    await client.post(
         f"/chats/{test_chat.id}/members",
         json={"username": member.username},
+        headers={"Authorization": f"Bearer {access_token}"},
+    )
+    response = await client.delete(
+        f"/chats/{test_chat.id}/members/{member.id}",
         headers={"Authorization": f"Bearer {access_token}"},
     )
     assert response.status_code == status.HTTP_200_OK
@@ -33,17 +35,16 @@ async def test_add_member(
             ChatUser.chat_id == test_chat.id, ChatUser.user_id == member.id
         )
     )
-    assert result == 1
+    assert result == 0
 
 
 @pytest.mark.chat
-async def test_add_member_to_not_existing_chat(
-    client: AsyncClient, access_token: str, member: User
+async def test_remove_member_from_not_existing_chat(
+    client: AsyncClient, session: AsyncSession, access_token: str, member: User
 ) -> None:
     random_chat = uuid.uuid4()
-    response = await client.post(
-        f"/chats/{random_chat}/members",
-        json={"username": member.username},
+    response = await client.delete(
+        f"/chats/{random_chat}/members/{member.id}",
         headers={"Authorization": f"Bearer {access_token}"},
     )
     assert response.status_code == status.HTTP_404_NOT_FOUND
@@ -51,29 +52,33 @@ async def test_add_member_to_not_existing_chat(
 
 
 @pytest.mark.chat
-async def test_add_not_existing_user(
-    client: AsyncClient, access_token: str, test_chat: Chat
+async def test_remove_not_existing_user(
+    client: AsyncClient, session: AsyncSession, access_token: str, test_chat: Chat
 ) -> None:
-    username = "".join(random.choices(string.ascii_letters + string.digits, k=10))
-    response = await client.post(
-        f"/chats/{test_chat.id}/members",
-        json={"username": username},
+    user_id = 999_999
+    response = await client.delete(
+        f"/chats/{test_chat.id}/members/{user_id}",
         headers={"Authorization": f"Bearer {access_token}"},
     )
     assert response.status_code == status.HTTP_404_NOT_FOUND
-    assert username in response.json()["message"]
+    assert str(user_id) in response.json()["message"]
 
 
 @pytest.mark.chat
-async def test_add_member_without_permission(
+async def test_remove_member_without_permission(
     client: AsyncClient,
+    access_token: str,
     member_access_token: str,
     test_chat: Chat,
     member: User,
 ) -> None:
-    response = await client.post(
+    await client.post(
         f"/chats/{test_chat.id}/members",
         json={"username": member.username},
+        headers={"Authorization": f"Bearer {access_token}"},
+    )
+    response = await client.delete(
+        f"/chats/{test_chat.id}/members/{member.id}",
         headers={"Authorization": f"Bearer {member_access_token}"},
     )
     assert response.status_code == status.HTTP_403_FORBIDDEN
@@ -81,17 +86,17 @@ async def test_add_member_without_permission(
 
 
 @pytest.mark.chat
-async def test_add_already_member(
+async def test_remove_already_not_member(
     client: AsyncClient,
+    session: AsyncSession,
     access_token: str,
     test_chat: Chat,
-    test_user: User,
+    member: User,
 ) -> None:
-    response = await client.post(
-        f"/chats/{test_chat.id}/members",
-        json={"username": test_user.username},
+    response = await client.delete(
+        f"/chats/{test_chat.id}/members/{member.id}",
         headers={"Authorization": f"Bearer {access_token}"},
     )
-    assert response.status_code == status.HTTP_409_CONFLICT
+    assert response.status_code == status.HTTP_404_NOT_FOUND
+    assert str(member.id) in response.json()["message"]
     assert test_chat.name in response.json()["message"]
-    assert test_user.username in response.json()["message"]

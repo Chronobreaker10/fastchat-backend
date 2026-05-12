@@ -7,12 +7,14 @@ from api.errors import setup_exceptions
 from api.middlewares import setup_middlewares
 from api.routes import setup_routes
 from core.config import settings
+from core.database import db_helper
 from fastapi import FastAPI
 
 
 @asynccontextmanager
 async def lifespan(_: FastAPI) -> AsyncGenerator[None, Any]:
     yield
+    await db_helper.dispose()
 
 
 app = FastAPI(

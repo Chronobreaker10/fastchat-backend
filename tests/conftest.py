@@ -30,13 +30,13 @@ async def clear_database() -> None:
         await connection.run_sync(Base.metadata.drop_all)
 
 
-@pytest.fixture(name="session", scope="session")
+@pytest.fixture(name="session")
 async def get_session_override() -> AsyncGenerator[AsyncSession]:
     async with session_factory() as session:
         yield session
 
 
-@pytest.fixture(name="client", scope="session")
+@pytest.fixture(name="client")
 async def test_client(session: AsyncSession) -> AsyncGenerator[AsyncClient, Any]:
     async def get_override_session() -> AsyncSession:
         return session

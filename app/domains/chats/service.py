@@ -50,6 +50,7 @@ class ChatService:
         if await self.chat_repo.is_member(self.session, chat_id, user_id):
             raise AlreadyMemberChatError
         await self.chat_repo.add_member(self.session, chat_id, user_id)
+        await self.session.commit()
 
     async def add_member_to_chat_by_username(
         self, chat_id: uuid.UUID, username: str, current_user_id: int
@@ -90,7 +91,6 @@ class ChatService:
         chat_data = ChatCreateInDB(user_id=creator_id, **data.model_dump())
         chat = await self.chat_repo.create(self.session, chat_data)
         await self.add_member_to_chat(chat.id, creator_id)
-        await self.session.commit()
         return chat
 
     async def update_chat(
