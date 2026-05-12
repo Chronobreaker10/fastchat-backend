@@ -1,8 +1,10 @@
 from collections.abc import AsyncGenerator
+from contextlib import asynccontextmanager
 from typing import Any
 
 import pytest
 from core.base.models import Base
+from core.config import settings
 from core.database import db_helper
 from domains.auth.security import get_password_hash
 from domains.users.models import User
@@ -41,19 +43,21 @@ async def test_client(session: AsyncSession) -> AsyncGenerator[AsyncClient, Any]
 
     app.dependency_overrides[db_helper.get_session] = get_override_session
     async with AsyncClient(
-        transport=ASGITransport(app=app), base_url="http://testhost"
+        transport=ASGITransport(app=app),
+        base_url=f"http://testhost{settings.api_config.prefix}",
     ) as client:
         yield client
     app.dependency_overrides.clear()
 
 
-@pytest.fixture(scope="function", name="test_user")
-async def create_test_user(
-    session: AsyncSession, setup_database: None
+@asynccontextmanager
+async def _create_user(
+    username: str, password: str, session: AsyncSession
 ) -> AsyncGenerator[User, Any]:
-    password = get_password_hash("secret")
-    test_user = User(username="test_user", hashed_password=password)
+    password = get_password_hash(password)
+    test_user = User(username=username, hashed_password=password)
     session.add(test_user)
+    await session.flush()
     await session.commit()
     try:
         yield test_user
@@ -62,9 +66,33 @@ async def create_test_user(
         await session.commit()
 
 
+@pytest.fixture(scope="function", name="test_user")
+async def create_test_user(
+    session: AsyncSession, setup_database: None
+) -> AsyncGenerator[User, Any]:
+    async with _create_user("test_user", "secret", session) as user:
+        yield user
+
+
+@pytest.fixture(scope="function", name="member")
+async def create_test_member(
+    session: AsyncSession, setup_database: None
+) -> AsyncGenerator[User, Any]:
+    async with _create_user("member", "secret", session) as user:
+        yield user
+
+
 @pytest.fixture(name="access_token")
 async def login_user(client: AsyncClient, test_user: User) -> str:
     response = await client.post(
         "/auth/token", data={"username": "test_user", "password": "secret"}
+    )
+    return response.json()["access_token"]
+
+
+@pytest.fixture(name="member_access_token")
+async def login_member(client: AsyncClient, member: User) -> str:
+    response = await client.post(
+        "/auth/token", data={"username": "member", "password": "secret"}
     )
     return response.json()["access_token"]

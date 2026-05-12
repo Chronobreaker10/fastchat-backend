@@ -1,6 +1,6 @@
 from typing import Literal
 
-from pydantic import BaseModel, PostgresDsn
+from pydantic import BaseModel, Field, PostgresDsn
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -38,8 +38,8 @@ class Settings(BaseSettings):
     security: SecurityConfig
     env: Literal["prod", "dev", "test"] = "dev"
     default_limit: int = 100
-    run_config: RunConfig = RunConfig()
-    api_config: ApiConfig = ApiConfig()
+    run_config: RunConfig = Field(default_factory=RunConfig)
+    api_config: ApiConfig = Field(default_factory=ApiConfig)
     model_config = SettingsConfigDict(
         env_file=(".env.template", ".env"),
         case_sensitive=False,

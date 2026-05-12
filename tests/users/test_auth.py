@@ -60,8 +60,14 @@ async def test_get_profile(client: AsyncClient, access_token: str) -> None:
 
 @pytest.mark.auth
 async def test_get_profile_by_cookie(client: AsyncClient, access_token: str) -> None:
-    client.cookies.set("access_token", access_token)
     response = await client.get("/users/me")
     assert response.status_code == status.HTTP_200_OK
     assert response.json()["username"] == "test_user"
-    client.cookies.delete("access_token")
+
+
+@pytest.mark.auth
+async def test_logout_user(client: AsyncClient, access_token: str) -> None:
+    assert client.cookies.get("access_token") is not None
+    response = await client.post("/auth/logout")
+    assert response.status_code == status.HTTP_200_OK
+    assert client.cookies.get("access_token") is None

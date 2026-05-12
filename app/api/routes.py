@@ -4,7 +4,7 @@ from domains.users.router import router as users_router
 from fastapi import FastAPI
 
 
-def setup_routes(app: FastAPI) -> None:
-    app.include_router(users_router)
-    app.include_router(auth_router)
-    app.include_router(chat_router)
+def setup_routes(app: FastAPI, prefix: str = "") -> None:
+    app.include_router(users_router, prefix=prefix)
+    app.include_router(auth_router, prefix=prefix)
+    app.include_router(chat_router, prefix=prefix)

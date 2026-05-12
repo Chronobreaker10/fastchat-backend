@@ -33,13 +33,15 @@ class ChatService:
         else:
             chat = await self.chat_repo.get_by_uuid(self.session, chat_id)
         if chat is None:
-            raise ChatNotFoundError
+            message = f"Чат с ID {chat_id} не найден"
+            raise ChatNotFoundError(message)
         return chat
 
     async def _get_user(self, user_id: int) -> User:
         user = await self.user_repo.get_by_id(self.session, user_id)
         if user is None:
-            raise UserNotFoundError
+            message = f"Пользователь с ID {user_id} не найден"
+            raise UserNotFoundError(message)
         return user
 
     async def add_member_to_chat(self, chat_id: uuid.UUID, user_id: int) -> None:
@@ -59,9 +61,11 @@ class ChatService:
             )
         user = await self.user_repo.get_by_username(self.session, username)
         if user is None:
-            raise UserNotFoundError
+            message = f"Пользователь с именем {username} не найден"
+            raise UserNotFoundError(message)
         if await self.chat_repo.is_member(self.session, chat_id, user.id):
-            raise AlreadyMemberChatError
+            message = f"Пользователь {username} уже добавлен в чат {chat.name}"
+            raise AlreadyMemberChatError(message)
         await self.chat_repo.add_member(self.session, chat_id, user.id)
         await self.session.commit()
         return chat.name
@@ -76,7 +80,8 @@ class ChatService:
             )
         user = await self._get_user(user_id)
         if not await self.chat_repo.is_member(self.session, chat_id, user.id):
-            raise AlreadyNotMemberChatError
+            message = f"Пользователя с ID {user_id} нет в чате {chat.name}"
+            raise AlreadyNotMemberChatError(message)
         await self.chat_repo.delete_member(self.session, chat_id, user.id)
         await self.session.commit()
         return chat.name, user.username
@@ -111,7 +116,7 @@ class ChatService:
     async def leave_chat(self, chat_id: uuid.UUID, current_user_id: int) -> str:
         chat = await self._get_chat(chat_id, with_creator=True)
         if not await self.chat_repo.is_member(self.session, chat_id, current_user_id):
-            raise AlreadyNotMemberChatError
+            raise AlreadyNotMemberChatError("Вас нет в чате " + chat.name)
         if current_user_id == chat.creator.id:
             await self.chat_repo.delete_chat(self.session, chat)
         else:

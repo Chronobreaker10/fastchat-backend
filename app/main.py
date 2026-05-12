@@ -22,7 +22,7 @@ app = FastAPI(
     version=settings.api_config.version,
 )
 
-setup_routes(app)
+setup_routes(app, prefix=settings.api_config.prefix)
 setup_exceptions(app)
 setup_middlewares(app)
 
