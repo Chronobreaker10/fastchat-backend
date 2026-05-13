@@ -58,8 +58,10 @@ async def delete_chat(
     current_user: CurrentUserDep,
     service: ChatServiceDep,
 ) -> Message:
-    await service.delete_chat(chat_id, current_user.id)
-    return Message(message="Чат успешно удален", details={"chat_id": chat_id})
+    chat = await service.delete_chat(chat_id, current_user.id)
+    return Message(
+        message=f"Чат {chat.name} успешно удален", details={"chat_id": chat_id}
+    )
 
 
 @router.post(

@@ -106,12 +106,13 @@ class ChatService:
         await self.chat_repo.update_chat(self.session, chat, chat_data)
         await self.session.commit()
 
-    async def delete_chat(self, chat_id: uuid.UUID, current_user_id: int) -> None:
+    async def delete_chat(self, chat_id: uuid.UUID, current_user_id: int) -> Chat:
         chat = await self._get_chat(chat_id, with_creator=True)
         if current_user_id != chat.creator.id:
             raise ForbiddenError("У вас нет прав на удаление чата " + str(chat_id))
         await self.chat_repo.delete_chat(self.session, chat)
         await self.session.commit()
+        return chat
 
     async def leave_chat(self, chat_id: uuid.UUID, current_user_id: int) -> str:
         chat = await self._get_chat(chat_id, with_creator=True)
