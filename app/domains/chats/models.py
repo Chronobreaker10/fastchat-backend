@@ -45,5 +45,5 @@ class ChatUser(Base):
     user: Mapped[User] = relationship(back_populates="chats")
     chat: Mapped[Chat] = relationship(back_populates="members")
     joined_at: Mapped[datetime] = mapped_column(
-        default=get_current_naive_dt, server_default=func.now()
+        default=get_current_naive_dt, server_default=func.now(), index=True
     )

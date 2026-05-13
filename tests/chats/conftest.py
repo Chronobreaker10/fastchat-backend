@@ -24,3 +24,20 @@ async def create_test_chat(
         await session.delete(chat_user)
         await session.delete(test_chat)
         await session.commit()
+
+
+@pytest.fixture(scope="function", name="chat_member")
+async def create_test_chat_member(
+    session: AsyncSession, setup_database: None, test_chat: Chat, member: User
+) -> AsyncGenerator[User, Any]:
+    chat_user = ChatUser(chat_id=test_chat.id, user_id=member.id)
+    session.add(chat_user)
+    await session.flush()
+    await session.commit()
+    try:
+        yield member
+    finally:
+        await session.flush()
+        if chat_user:
+            await session.delete(chat_user)
+        await session.commit()

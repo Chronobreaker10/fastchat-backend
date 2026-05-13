@@ -29,5 +29,5 @@ class Message(Base):
     )
     chat: Mapped[Chat] = relationship(back_populates="messages")
     created_at: Mapped[datetime] = mapped_column(
-        default=get_current_naive_dt, server_default=func.now()
+        default=get_current_naive_dt, server_default=func.now(), index=True
     )
