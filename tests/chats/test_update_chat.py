@@ -31,7 +31,7 @@ async def test_update_chat(
     access_token: str,
     test_chat: Chat,
     data: dict,
-    member: User,
+    chat_member: User,
 ) -> None:
     response = await client.put(
         f"/chats/{test_chat.id}",
@@ -78,3 +78,20 @@ async def test_update_chat_without_permission(
     assert str(test_chat.id) in response.json()["message"]
     result = await session.execute(select(Chat.name).where(Chat.id == test_chat.id))
     assert result.mappings().one()["name"] == test_chat.name
+
+
+@pytest.mark.chat
+async def test_update_chat_owner_not_member(
+    client: AsyncClient,
+    session: AsyncSession,
+    access_token: str,
+    test_chat: Chat,
+    member: User,
+) -> None:
+    response = await client.put(
+        f"/chats/{test_chat.id}",
+        json={"owner_id": member.id},
+        headers={"Authorization": f"Bearer {access_token}"},
+    )
+    assert response.status_code == status.HTTP_404_NOT_FOUND
+    assert str(member.id) in response.json()["message"]

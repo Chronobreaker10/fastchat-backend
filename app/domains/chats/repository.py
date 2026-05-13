@@ -36,6 +36,23 @@ class ChatRepository(BaseRepository[Chat]):
         return result.scalar_one_or_none()
 
     @staticmethod
+    async def get_with_relationships(
+        session: AsyncSession,
+        chat_uuid: uuid.UUID,
+        with_creator: bool = False,
+        with_members: bool = False,
+    ) -> Chat | None:
+        query = select(Chat)
+        if with_creator:
+            query = query.options(joinedload(Chat.creator))
+        if with_members:
+            query = query.options(selectinload(Chat.members).joinedload(ChatUser.user))
+        result = await session.execute(
+            query.where(Chat.id == chat_uuid),
+        )
+        return result.scalar_one_or_none()
+
+    @staticmethod
     async def add_member(
         session: AsyncSession, chat_id: uuid.UUID, user_id: int
     ) -> ChatUser:

@@ -27,9 +27,13 @@ class ChatService:
         self.user_repo = user_repo
         self.session = session
 
-    async def _get_chat(self, chat_id: uuid.UUID, with_creator: bool = False) -> Chat:
-        if with_creator:
-            chat = await self.chat_repo.get_with_creator(self.session, chat_id)
+    async def _get_chat(
+        self, chat_id: uuid.UUID, with_creator: bool = False, with_members: bool = False
+    ) -> Chat:
+        if with_creator or with_members:
+            chat = await self.chat_repo.get_with_relationships(
+                self.session, chat_id, with_creator, with_members
+            )
         else:
             chat = await self.chat_repo.get_by_uuid(self.session, chat_id)
         if chat is None:
@@ -96,13 +100,16 @@ class ChatService:
     async def update_chat(
         self, chat_id: uuid.UUID, chat_data: ChatUpdate, current_user_id: int
     ) -> None:
-        chat = await self._get_chat(chat_id, with_creator=True)
+        chat = await self._get_chat(chat_id, with_creator=True, with_members=True)
         if current_user_id != chat.creator.id:
             raise ForbiddenError(
                 "У вас нет прав на редактирование чата " + str(chat_id)
             )
         if chat_data.user_id is not None:
-            await self._get_user(chat_data.user_id)
+            user = await self._get_user(chat_data.user_id)
+            if user not in [member.user for member in chat.members]:
+                message = f"Пользователя с ID {user.id} нет в чате {chat.name}"
+                raise AlreadyNotMemberChatError(message)
         await self.chat_repo.update_chat(self.session, chat, chat_data)
         await self.session.commit()
 
