@@ -54,9 +54,9 @@ class ChatRepository(BaseRepository[Chat]):
 
     @staticmethod
     async def add_member(
-        session: AsyncSession, chat_id: uuid.UUID, user_id: int
+        session: AsyncSession, chat_id: uuid.UUID, user_id: int, invited_id: int
     ) -> ChatUser:
-        chat_user = ChatUser(chat_id=chat_id, user_id=user_id)
+        chat_user = ChatUser(chat_id=chat_id, user_id=user_id, invited_id=invited_id)
         session.add(chat_user)
         await session.flush()
         await session.refresh(chat_user)

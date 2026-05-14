@@ -49,7 +49,9 @@ async def update_chat(
     data: Annotated[ChatUpdate, Body()],
 ) -> Message:
     await service.update_chat(chat_id, data, current_user.id)
-    return Message(message="Чат успешно изменен", details={"chat_id": chat_id})
+    return Message(
+        message=f"Чат {chat_id} успешно изменен", details={"chat_id": chat_id}
+    )
 
 
 @router.delete("/{chat_id}", response_model=Message, summary="Удаление чата")
@@ -82,7 +84,9 @@ async def add_member(
         chat_id, username, current_user.id
     )
     return Message(
-        message=f"Пользователь {username} успешно добавлен в чат {chat_name}",
+        message=(
+            f"Пользователь {current_user.username} добавил {username} в чат {chat_name}"
+        ),
         details={"chat_id": chat_id},
     )
 
@@ -100,7 +104,8 @@ async def leave_chat(
 ) -> Message:
     chat_name = await service.leave_chat(chat_id, current_user.id)
     return Message(
-        message=f"Вы успешно покинули чат {chat_name}", details={"chat_id": chat_id}
+        message=f"Пользователь {current_user.username} покинул чат {chat_name}",
+        details={"chat_id": chat_id},
     )
 
 
@@ -119,6 +124,6 @@ async def remove_member(
         chat_id, user_id, current_user.id
     )
     return Message(
-        message=f"Пользователь {username} успешно удален из чата {chat_name}",
+        message=f"Пользователь {username} удален из чата {chat_name}",
         details={"chat_id": chat_id},
     )

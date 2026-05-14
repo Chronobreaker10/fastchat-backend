@@ -41,9 +41,15 @@ class ChatUser(Base):
     chat_id: Mapped[uuid.UUID] = mapped_column(
         ForeignKey("chats.id", ondelete="CASCADE")
     )
+    invited_id: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL")
+    )
 
-    user: Mapped[User] = relationship(back_populates="chats")
+    user: Mapped[User] = relationship(back_populates="chats", foreign_keys=[user_id])
     chat: Mapped[Chat] = relationship(back_populates="members")
+    invited_user: Mapped[User | None] = relationship(
+        back_populates="invitations", foreign_keys=[invited_id]
+    )
     joined_at: Mapped[datetime] = mapped_column(
         default=get_current_naive_dt, server_default=func.now(), index=True
     )

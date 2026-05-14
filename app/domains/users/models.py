@@ -20,7 +20,10 @@ class User(Base):
     hashed_password: Mapped[str] = mapped_column(String(100))
 
     chats: Mapped[list[ChatUser]] = relationship(
-        back_populates="user", passive_deletes=True
+        back_populates="user", passive_deletes=True, foreign_keys="[ChatUser.user_id]"
+    )
+    invitations: Mapped[list[ChatUser]] = relationship(
+        back_populates="invited_user", foreign_keys="[ChatUser.invited_id]"
     )
     created_chats: Mapped[list[Chat]] = relationship(
         back_populates="creator", passive_deletes=True

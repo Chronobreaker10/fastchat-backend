@@ -48,12 +48,14 @@ class ChatService:
             raise UserNotFoundError(message)
         return user
 
-    async def add_member_to_chat(self, chat_id: uuid.UUID, user_id: int) -> None:
+    async def add_member_to_chat(
+        self, chat_id: uuid.UUID, user_id: int, invited_id: int
+    ) -> None:
         await self._get_user(user_id)
         await self._get_chat(chat_id)
         if await self.chat_repo.is_member(self.session, chat_id, user_id):
             raise AlreadyMemberChatError
-        await self.chat_repo.add_member(self.session, chat_id, user_id)
+        await self.chat_repo.add_member(self.session, chat_id, user_id, invited_id)
         await self.session.commit()
 
     async def add_member_to_chat_by_username(
@@ -71,7 +73,7 @@ class ChatService:
         if await self.chat_repo.is_member(self.session, chat_id, user.id):
             message = f"Пользователь {username} уже добавлен в чат {chat.name}"
             raise AlreadyMemberChatError(message)
-        await self.chat_repo.add_member(self.session, chat_id, user.id)
+        await self.chat_repo.add_member(self.session, chat_id, user.id, current_user_id)
         await self.session.commit()
         return chat.name
 
@@ -94,7 +96,7 @@ class ChatService:
     async def create_chat(self, creator_id: int, data: ChatCreate) -> Chat:
         chat_data = ChatCreateInDB(user_id=creator_id, **data.model_dump())
         chat = await self.chat_repo.create(self.session, chat_data)
-        await self.add_member_to_chat(chat.id, creator_id)
+        await self.add_member_to_chat(chat.id, creator_id, creator_id)
         return chat
 
     async def update_chat(

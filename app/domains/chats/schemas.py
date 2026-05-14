@@ -40,6 +40,10 @@ class ChatUser(BaseModel):
         datetime,
         Field(title="Дата добавления", description="Когда участник был добавлен в чат"),
     ]
+    invited_user_id: Annotated[
+        int | None,
+        Field(ge=1, title="ID пользователя, пригласившего в чат", alias="invited_id"),
+    ]
 
 
 class ChatRead(ChatBase):
