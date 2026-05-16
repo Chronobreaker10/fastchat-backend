@@ -4,7 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from domains.auth.errors import InvalidCredentialsError
 from domains.auth.schemas import Token
 from domains.auth.security import (
-    create_access_token,
+    create_jwt_token,
     get_password_hash,
     validate_token,
     verify_password,
@@ -25,7 +25,7 @@ class AuthService:
             raise InvalidCredentialsError
         if not verify_password(password, user.hashed_password):
             raise InvalidCredentialsError
-        access_token = create_access_token(data={"sub": str(user.id)})
+        access_token = create_jwt_token(data={"sub": str(user.id)})
         return Token(access_token=access_token)
 
     async def register_user(self, user_data: UserCreate) -> Token:
@@ -35,7 +35,7 @@ class AuthService:
         )
         user = await self.repo.create_user(self.session, db_user)
         await self.session.commit()
-        access_token = create_access_token(data={"sub": str(user.id)})
+        access_token = create_jwt_token(data={"sub": str(user.id)})
         return Token(access_token=access_token)
 
     async def get_user_from_token(self, token: str) -> UserRead:

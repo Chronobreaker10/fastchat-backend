@@ -61,3 +61,8 @@ class ChatRead(ChatBase):
         list[ChatUser],
         Field(title="Участники чата", description="Список участников чата"),
     ]
+
+
+class InvitesResponse(BaseModel):
+    link: Annotated[str, Field(title="Ссылка-приглашение")]
+    chat_name: Annotated[str, Field(title="Название чата")]

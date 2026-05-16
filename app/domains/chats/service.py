@@ -3,6 +3,8 @@ import uuid
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from domains.auth.errors import ForbiddenError
+from domains.auth.schemas import TokenType
+from domains.auth.security import create_jwt_token
 from domains.chats.errors import (
     AlreadyMemberChatError,
     AlreadyNotMemberChatError,
@@ -137,3 +139,17 @@ class ChatService:
     async def get_user_chats(self, user_id: int) -> list[ChatRead]:
         chats = await self.chat_repo.get_chats_by_user_id(self.session, user_id)
         return [ChatRead.model_validate(chat) for chat in chats]
+
+    async def generate_invite_token(
+        self, chat_id: uuid.UUID, current_user_id: int
+    ) -> tuple[str, str]:
+        chat = await self._get_chat(chat_id, with_members=True)
+        if not await self.chat_repo.is_member(self.session, chat_id, current_user_id):
+            raise ForbiddenError(
+                "У вас нет прав на добавление участника в чат " + str(chat_id)
+            )
+        invite_token = create_jwt_token(
+            {"sub": str(chat.id), "iss": current_user_id},
+            token_type=TokenType.CHAT_INVITE_LINK,
+        )
+        return invite_token, chat.name

@@ -1,12 +1,11 @@
-import uuid
 from typing import Annotated
 
 from core.base.schemas import Message
-from fastapi import APIRouter, Body, Path, status
+from fastapi import APIRouter, Body, Path, Query, Request, status
 
 from domains.auth.dependencies import CurrentUserDep
-from domains.chats.dependencies import ChatServiceDep
-from domains.chats.schemas import ChatCreate, ChatRead, ChatUpdate
+from domains.chats.dependencies import ChatServiceDep, ChatUUIDDep
+from domains.chats.schemas import ChatCreate, ChatRead, ChatUpdate, InvitesResponse
 
 router = APIRouter(
     prefix="/chats",
@@ -43,7 +42,7 @@ async def get_my_chats(
     description="Изменение названия или владельца чата",
 )
 async def update_chat(
-    chat_id: Annotated[uuid.UUID, Path(title="UUID чата")],
+    chat_id: ChatUUIDDep,
     current_user: CurrentUserDep,
     service: ChatServiceDep,
     data: Annotated[ChatUpdate, Body()],
@@ -56,7 +55,7 @@ async def update_chat(
 
 @router.delete("/{chat_id}", response_model=Message, summary="Удаление чата")
 async def delete_chat(
-    chat_id: Annotated[uuid.UUID, Path(title="UUID чата")],
+    chat_id: ChatUUIDDep,
     current_user: CurrentUserDep,
     service: ChatServiceDep,
 ) -> Message:
@@ -72,7 +71,7 @@ async def delete_chat(
     summary="Добавить нового участника в чат",
 )
 async def add_member(
-    chat_id: Annotated[uuid.UUID, Path(title="UUID чата")],
+    chat_id: ChatUUIDDep,
     username: Annotated[
         str,
         Body(title="Имя нового участника", min_length=3, max_length=100, embed=True),
@@ -98,7 +97,7 @@ async def add_member(
     description="Если владелец покинет чат, то он будет автоматически закрыт",
 )
 async def leave_chat(
-    chat_id: Annotated[uuid.UUID, Path(title="UUID чата")],
+    chat_id: ChatUUIDDep,
     current_user: CurrentUserDep,
     service: ChatServiceDep,
 ) -> Message:
@@ -115,7 +114,7 @@ async def leave_chat(
     summary="Удалить пользователя из чата",
 )
 async def remove_member(
-    chat_id: Annotated[uuid.UUID, Path(title="UUID чата")],
+    chat_id: ChatUUIDDep,
     user_id: Annotated[int, Path(ge=1, title="ID пользователя")],
     current_user: CurrentUserDep,
     service: ChatServiceDep,
@@ -127,3 +126,43 @@ async def remove_member(
         message=f"Пользователь {username} удален из чата {chat_name}",
         details={"chat_id": chat_id},
     )
+
+
+@router.post("/{chat_id}/invites", response_model=Message, name="join_chat")
+async def join_chat_by_invite_link(
+    chat_id: ChatUUIDDep,
+    invite_token: Annotated[str, Query(min_length=1, title="Токен приглашения")],
+    current_user: CurrentUserDep,
+    service: ChatServiceDep,
+) -> Message:
+    chat_name, invited_name = await service.add_member_to_chat_by_invite_token(
+        chat_id, invite_token, current_user.id
+    )
+    return Message(
+        message=(
+            f"Пользователь {current_user.username} "
+            f"присоединился к чату {chat_name} "
+            f"по приглашению {invited_name}"
+        ),
+        details={"chat_id": chat_id},
+    )
+
+
+@router.get(
+    "/{chat_id}/invites",
+    response_model=InvitesResponse,
+    summary="Сгенерировать ссылку для приглашения в чат",
+)
+async def generate_invite_link(
+    chat_id: ChatUUIDDep,
+    current_user: CurrentUserDep,
+    service: ChatServiceDep,
+    request: Request,
+) -> InvitesResponse:
+    invite_token, chat_name = await service.generate_invite_token(
+        chat_id, current_user.id
+    )
+    invite_link = request.url_for("join_chat", chat_id=chat_id).include_query_params(
+        invite_token=invite_token
+    )
+    return InvitesResponse(link=str(invite_link), chat_name=chat_name)

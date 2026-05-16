@@ -1,7 +1,8 @@
+import uuid
 from typing import Annotated
 
 from core.dependencies import SessionDep
-from fastapi import Depends
+from fastapi import Depends, Path
 
 from domains.chats.repository import ChatRepository
 from domains.chats.service import ChatService
@@ -17,3 +18,4 @@ async def get_chat_service(
 
 
 ChatServiceDep = Annotated[ChatService, Depends(get_chat_service)]
+ChatUUIDDep = Annotated[uuid.UUID, Path(title="UUID чата")]
