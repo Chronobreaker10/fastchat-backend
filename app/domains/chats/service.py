@@ -4,7 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from domains.auth.errors import ForbiddenError
 from domains.auth.schemas import TokenType
-from domains.auth.security import create_jwt_token
+from domains.auth.security import create_jwt_token, validate_token
 from domains.chats.errors import (
     AlreadyMemberChatError,
     AlreadyNotMemberChatError,
@@ -54,8 +54,9 @@ class ChatService:
         self, chat_id: uuid.UUID, user_id: int, invited_id: int
     ) -> None:
         await self._get_user(user_id)
-        await self._get_chat(chat_id)
-        if await self.chat_repo.is_member(self.session, chat_id, user_id):
+        chat = await self._get_chat(chat_id, with_members=True)
+        # if await self.chat_repo.is_member(self.session, chat_id, user_id):
+        if user_id in [member.user.id for member in chat.members]:
             raise AlreadyMemberChatError
         await self.chat_repo.add_member(self.session, chat_id, user_id, invited_id)
         await self.session.commit()
@@ -63,8 +64,9 @@ class ChatService:
     async def add_member_to_chat_by_username(
         self, chat_id: uuid.UUID, username: str, current_user_id: int
     ) -> str:
-        chat = await self._get_chat(chat_id)
-        if not await self.chat_repo.is_member(self.session, chat_id, current_user_id):
+        chat = await self._get_chat(chat_id, with_members=True)
+        # if not await self.chat_repo.is_member(self.session, chat_id, current_user_id):
+        if current_user_id not in [member.user.id for member in chat.members]:
             raise ForbiddenError(
                 "У вас нет прав на добавление участника в чат " + str(chat_id)
             )
@@ -72,7 +74,8 @@ class ChatService:
         if user is None:
             message = f"Пользователь с именем {username} не найден"
             raise UserNotFoundError(message)
-        if await self.chat_repo.is_member(self.session, chat_id, user.id):
+        # if await self.chat_repo.is_member(self.session, chat_id, user.id):
+        if user.id in [member.user.id for member in chat.members]:
             message = f"Пользователь {username} уже добавлен в чат {chat.name}"
             raise AlreadyMemberChatError(message)
         await self.chat_repo.add_member(self.session, chat_id, user.id, current_user_id)
@@ -82,13 +85,14 @@ class ChatService:
     async def remove_member_from_chat(
         self, chat_id: uuid.UUID, user_id: int, current_user_id: int
     ) -> tuple[str, str]:
-        chat = await self._get_chat(chat_id, with_creator=True)
+        chat = await self._get_chat(chat_id, with_creator=True, with_members=True)
         if current_user_id != chat.creator.id:
             raise ForbiddenError(
                 "У вас нет прав на удаление пользователей из чата " + str(chat_id)
             )
         user = await self._get_user(user_id)
-        if not await self.chat_repo.is_member(self.session, chat_id, user.id):
+        # if not await self.chat_repo.is_member(self.session, chat_id, user.id):
+        if user.id not in [member.user.id for member in chat.members]:
             message = f"Пользователя с ID {user_id} нет в чате {chat.name}"
             raise AlreadyNotMemberChatError(message)
         await self.chat_repo.delete_member(self.session, chat_id, user.id)
@@ -144,7 +148,8 @@ class ChatService:
         self, chat_id: uuid.UUID, current_user_id: int
     ) -> tuple[str, str]:
         chat = await self._get_chat(chat_id, with_members=True)
-        if not await self.chat_repo.is_member(self.session, chat_id, current_user_id):
+        # if not await self.chat_repo.is_member(self.session, chat_id, current_user_id):
+        if current_user_id not in [member.user.id for member in chat.members]:
             raise ForbiddenError(
                 "У вас нет прав на добавление участника в чат " + str(chat_id)
             )
@@ -153,3 +158,18 @@ class ChatService:
             token_type=TokenType.CHAT_INVITE_LINK,
         )
         return invite_token, chat.name
+
+    async def add_member_to_chat_by_invite_token(
+        self, token: str, current_user_id: int
+    ) -> tuple[Chat, str]:
+        token_data = validate_token(token, token_type=TokenType.CHAT_INVITE_LINK)
+        chat = await self._get_chat(token_data.sub, with_members=True)
+        invited_user = await self._get_user(token_data.iss)
+        if current_user_id in [member.user.id for member in chat.members]:
+            message = f"Вы уже были добавлены в чат {chat.name}"
+            raise AlreadyMemberChatError(message)
+        await self.chat_repo.add_member(
+            self.session, chat.id, current_user_id, invited_user.id
+        )
+        await self.session.commit()
+        return chat, invited_user.username

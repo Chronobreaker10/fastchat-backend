@@ -41,9 +41,10 @@ def validate_token(token: str, token_type: TokenType = TokenType.ACCESS) -> Toke
         )
         if not payload.get("type") == token_type:
             raise UnauthorizedError
-        user_id = payload.get("sub")
-        if user_id is None:
+        sub = payload.get("sub")
+        iss = payload.get("iss")
+        if sub is None:
             raise UnauthorizedError
-        return TokenData(user_id=user_id)
+        return TokenData(sub=sub, iss=iss)
     except jwt.InvalidTokenError:
         raise UnauthorizedError

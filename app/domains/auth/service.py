@@ -40,7 +40,7 @@ class AuthService:
 
     async def get_user_from_token(self, token: str) -> UserRead:
         token_data = validate_token(token)
-        user = await self.repo.get_by_id(self.session, token_data.user_id)
+        user = await self.repo.get_by_id(self.session, token_data.sub)
         if user is None:
             raise InvalidCredentialsError
         return UserRead.model_validate(user)

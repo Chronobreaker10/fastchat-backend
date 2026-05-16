@@ -128,28 +128,32 @@ async def remove_member(
     )
 
 
-@router.post("/{chat_id}/invites", response_model=Message, name="join_chat")
+@router.post(
+    "/invite",
+    response_model=Message,
+    name="join_chat",
+    summary="Присоединиться к чату по токену приглашения",
+)
 async def join_chat_by_invite_link(
-    chat_id: ChatUUIDDep,
     invite_token: Annotated[str, Query(min_length=1, title="Токен приглашения")],
     current_user: CurrentUserDep,
     service: ChatServiceDep,
 ) -> Message:
-    chat_name, invited_name = await service.add_member_to_chat_by_invite_token(
-        chat_id, invite_token, current_user.id
+    chat, invited_name = await service.add_member_to_chat_by_invite_token(
+        invite_token, current_user.id
     )
     return Message(
         message=(
             f"Пользователь {current_user.username} "
-            f"присоединился к чату {chat_name} "
+            f"присоединился к чату {chat.name} "
             f"по приглашению {invited_name}"
         ),
-        details={"chat_id": chat_id},
+        details={"chat_id": chat.id},
     )
 
 
 @router.get(
-    "/{chat_id}/invites",
+    "/{chat_id}/invite",
     response_model=InvitesResponse,
     summary="Сгенерировать ссылку для приглашения в чат",
 )
@@ -162,7 +166,7 @@ async def generate_invite_link(
     invite_token, chat_name = await service.generate_invite_token(
         chat_id, current_user.id
     )
-    invite_link = request.url_for("join_chat", chat_id=chat_id).include_query_params(
+    invite_link = request.url_for("join_chat").include_query_params(
         invite_token=invite_token
     )
     return InvitesResponse(link=str(invite_link), chat_name=chat_name)

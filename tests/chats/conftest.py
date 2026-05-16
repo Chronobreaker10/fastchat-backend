@@ -4,6 +4,7 @@ from typing import Any
 import pytest
 from domains.chats.models import Chat, ChatUser
 from domains.users.models import User
+from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
 
@@ -41,3 +42,14 @@ async def create_test_chat_member(
         if chat_user:
             await session.delete(chat_user)
         await session.commit()
+
+
+@pytest.fixture(scope="function", name="invite_link")
+async def get_invite_link(
+    client: AsyncClient, test_chat: Chat, access_token: str
+) -> str:
+    response = await client.get(
+        f"/chats/{test_chat.id}/invite",
+        headers={"Authorization": f"Bearer {access_token}"},
+    )
+    return response.json()["link"]

@@ -17,12 +17,11 @@ class Token(BaseModel):
 
 
 class TokenData(BaseModel):
-    user_id: Annotated[int, Field(ge=1, title="ID", description="ID")]
-
-
-class JWTTokenPayload(BaseModel):
     sub: Annotated[int | uuid.UUID, Field(title="Уникальный идентификатор сущности")]
     iss: Annotated[int | None, Field(title="Издатель токена", ge=1)] = None
+
+
+class JWTTokenPayload(TokenData):
     exp: Annotated[datetime, Field(title="Время истечения срока действия токена")]
     type: Annotated[
         TokenType,
