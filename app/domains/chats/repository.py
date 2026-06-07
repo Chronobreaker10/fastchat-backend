@@ -4,7 +4,7 @@ import uuid
 from collections.abc import Sequence
 
 from core.base.repository import BaseRepository
-from sqlalchemy import delete, select
+from sqlalchemy import RowMapping, delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import (
     joinedload,
@@ -13,6 +13,7 @@ from sqlalchemy.orm import (
 
 from domains.chats.models import Chat, ChatUser
 from domains.chats.schemas import ChatUpdate
+from domains.messages.models import Message
 
 
 class ChatRepository(BaseRepository[Chat]):
@@ -27,26 +28,22 @@ class ChatRepository(BaseRepository[Chat]):
         return result.scalar_one_or_none()
 
     @staticmethod
-    async def get_with_creator(
-        session: AsyncSession, chat_uuid: uuid.UUID
-    ) -> Chat | None:
-        result = await session.execute(
-            select(Chat).options(joinedload(Chat.creator)).where(Chat.id == chat_uuid),
-        )
-        return result.scalar_one_or_none()
-
-    @staticmethod
     async def get_with_relationships(
         session: AsyncSession,
         chat_uuid: uuid.UUID,
         with_creator: bool = False,
         with_members: bool = False,
+        with_messages: bool = False,
     ) -> Chat | None:
         query = select(Chat)
         if with_creator:
             query = query.options(joinedload(Chat.creator))
         if with_members:
             query = query.options(selectinload(Chat.members).joinedload(ChatUser.user))
+        if with_messages:
+            query = query.options(
+                selectinload(Chat.messages).joinedload(Message.sender)
+            )
         result = await session.execute(
             query.where(Chat.id == chat_uuid),
         )
@@ -82,22 +79,35 @@ class ChatRepository(BaseRepository[Chat]):
         return result.scalar_one_or_none() is not None
 
     @staticmethod
-    async def get_chats_by_user_id(
+    async def get_chats_by_user_id_with_last_message(
         session: AsyncSession, user_id: int
-    ) -> Sequence[Chat]:
-        # with_loader_criteria фильтрует только участников чата, а не сами чаты
-
-        result = await session.execute(
-            select(Chat)
-            .join(Chat.members)
-            .where(ChatUser.user_id == user_id)
-            .options(
-                joinedload(Chat.creator),
-                selectinload(Chat.members).options(joinedload(ChatUser.user)),
-            )
-            .distinct()
+    ) -> Sequence[RowMapping]:
+        row_number = func.row_number().over(
+            partition_by=Chat.id, order_by=Message.created_at.desc()
         )
-        return result.scalars().all()
+        subquery = (
+            select(
+                Chat.id,
+                Chat.name,
+                Chat.user_id,
+                Chat.created_at,
+                Message.id.label("message_id"),
+                Message.text.label("message_text"),
+                Message.sender_id.label("sender_id"),
+                Message.created_at.label("sent_at"),
+                row_number.label("row_num"),
+            )
+            .join(Chat.members)
+            .join(Chat.messages, isouter=True)
+            .where(ChatUser.user_id == user_id)
+        ).subquery()
+        query = (
+            select(subquery)
+            .where(subquery.c.row_num == 1)
+            .order_by(subquery.c.sent_at.desc())
+        )
+        result = await session.execute(query)
+        return result.mappings().all()
 
     @staticmethod
     async def update_chat(

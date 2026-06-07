@@ -1,5 +1,6 @@
 import uuid
 
+from core.base.schemas import PaginationParams
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from domains.auth.errors import ForbiddenError
@@ -12,7 +13,16 @@ from domains.chats.errors import (
 )
 from domains.chats.models import Chat
 from domains.chats.repository import ChatRepository
-from domains.chats.schemas import ChatCreate, ChatCreateInDB, ChatRead, ChatUpdate
+from domains.chats.schemas import (
+    ChatCreate,
+    ChatCreateInDB,
+    ChatInDB,
+    ChatRead,
+    ChatUpdate,
+    ChatWithMessages,
+)
+from domains.messages.repository import MessageRepository
+from domains.messages.schemas import MessageRead, MessageReadWithSender
 from domains.users.errors import UserNotFoundError
 from domains.users.models import User
 from domains.users.repository import UserRepository
@@ -23,10 +33,12 @@ class ChatService:
         self,
         chat_repo: ChatRepository,
         user_repo: UserRepository,
+        message_repo: MessageRepository,
         session: AsyncSession,
     ) -> None:
         self.chat_repo = chat_repo
         self.user_repo = user_repo
+        self.message_repo = message_repo
         self.session = session
 
     async def _get_chat(
@@ -141,8 +153,38 @@ class ChatService:
         return chat.name
 
     async def get_user_chats(self, user_id: int) -> list[ChatRead]:
-        chats = await self.chat_repo.get_chats_by_user_id(self.session, user_id)
-        return [ChatRead.model_validate(chat) for chat in chats]
+        chats = await self.chat_repo.get_chats_by_user_id_with_last_message(
+            self.session, user_id
+        )
+        result = []
+        for chat in chats:
+            last_message = None
+            if chat["message_id"]:
+                last_message = MessageRead(
+                    id=chat["message_id"],
+                    created_at=chat["sent_at"],
+                    sender_id=chat["sender_id"],
+                    text=chat["message_text"],
+                    chat_id=chat["id"],
+                )
+            result.append(ChatRead(**chat, last_message=last_message))
+        return result
+
+    async def get_chat_by_uuid(
+        self, chat_id: uuid.UUID, current_user_id: int, pagination: PaginationParams
+    ) -> ChatWithMessages:
+        chat = await self._get_chat(chat_id, with_members=True)
+        if current_user_id not in [member.user.id for member in chat.members]:
+            raise ForbiddenError("Вы не являетесь участником чата " + str(chat_id))
+        messages = await self.message_repo.get_messages_by_chat_id(
+            self.session, chat_id, pagination
+        )
+        return ChatWithMessages(
+            **ChatInDB.model_validate(chat).model_dump(),
+            messages=[
+                MessageReadWithSender.model_validate(message) for message in messages
+            ],
+        )
 
     async def generate_invite_token(
         self, chat_id: uuid.UUID, current_user_id: int

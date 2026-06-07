@@ -1,6 +1,6 @@
 from typing import Annotated
 
-from core.base.schemas import Message
+from core.base.schemas import MessageResponse
 from core.config import settings
 from fastapi import APIRouter, Body, Form, Response
 
@@ -50,12 +50,12 @@ async def register_user(
     return token
 
 
-@router.post("/logout", response_model=Message)
+@router.post("/logout", response_model=MessageResponse)
 async def logout_user(
     current_user: CurrentUserDep,
     response: Response,
-) -> Message:
+) -> MessageResponse:
     response.delete_cookie("access_token")
-    return Message(
+    return MessageResponse(
         message="Вы успешно вышли из аккаунта", details={"user_id": current_user.id}
     )

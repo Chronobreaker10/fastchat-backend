@@ -4,6 +4,7 @@ from typing import Annotated
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from domains.messages.schemas import MessageRead, MessageReadWithSender
 from domains.users.schemas import UserRead
 
 
@@ -53,13 +54,47 @@ class ChatRead(ChatBase):
             title="ID чата", description="Уникальный идентификатор чата в формате UUID"
         ),
     ]
-    creator: Annotated[
-        UserRead,
-        Field(title="Создатель чата", description="Создавший этот чат пользователь"),
+    # creator: Annotated[
+    #     UserRead,
+    #     Field(title="Создатель чата", description="Создавший этот чат пользователь"),
+    # ]
+    # members: Annotated[
+    #     list[ChatUser],
+    #     Field(title="Участники чата", description="Список участников чата"),
+    # ]
+    created_at: Annotated[
+        datetime,
+        Field(title="Время создания чата"),
     ]
-    members: Annotated[
-        list[ChatUser],
-        Field(title="Участники чата", description="Список участников чата"),
+    last_message: Annotated[MessageRead | None, Field(title="Последнее сообщение")] = (
+        None
+    )
+
+
+class ChatInDB(ChatCreate):
+    id: uuid.UUID
+    user_id: int
+    created_at: datetime
+
+
+class ChatWithMessages(ChatBase):
+    id: Annotated[
+        uuid.UUID,
+        Field(
+            title="ID чата", description="Уникальный идентификатор чата в формате UUID"
+        ),
+    ]
+    messages: Annotated[
+        list[MessageReadWithSender],
+        Field(
+            title="Сообщения чата",
+            description="Список сообщений чата",
+            default_factory=list,
+        ),
+    ]
+    created_at: Annotated[
+        datetime,
+        Field(title="Время создания чата"),
     ]
 
 

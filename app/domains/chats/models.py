@@ -25,7 +25,9 @@ class Chat(Base):
         back_populates="chat", passive_deletes=True
     )
     messages: Mapped[list[Message]] = relationship(
-        back_populates="chat", passive_deletes=True
+        back_populates="chat",
+        passive_deletes=True,
+        order_by="Message.created_at.desc()",
     )
     creator: Mapped[User] = relationship(back_populates="created_chats")
     created_at: Mapped[datetime] = mapped_column(

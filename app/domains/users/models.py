@@ -29,7 +29,7 @@ class User(Base):
         back_populates="creator", passive_deletes=True
     )
     user_messages: Mapped[list[Message]] = relationship(
-        back_populates="author", passive_deletes=True
+        back_populates="sender", passive_deletes=True
     )
     created_at: Mapped[datetime] = mapped_column(
         default=get_current_naive_dt, server_default=func.now()
