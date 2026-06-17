@@ -7,6 +7,7 @@ from core.base.models import Base
 from core.config import settings
 from core.database import db_helper
 from domains.auth.security import get_password_hash
+from domains.chats.models import Chat, ChatUser
 from domains.users.models import User
 from httpx import ASGITransport, AsyncClient
 from main import app
@@ -95,3 +96,19 @@ async def login_member(client: AsyncClient, member: User) -> str:
         "/auth/token", data={"username": "member", "password": "secret"}
     )
     return response.json()["access_token"]
+
+
+@pytest.fixture(scope="function", name="test_chat")
+async def create_test_chat(
+    session: AsyncSession, setup_database: None, test_user: User
+) -> AsyncGenerator[Chat, Any]:
+    test_chat = Chat(name="test_chat", user_id=test_user.id)
+    session.add(test_chat)
+    await session.flush()
+    chat_user = ChatUser(chat_id=test_chat.id, user_id=test_user.id)
+    session.add(chat_user)
+    await session.flush()
+    try:
+        yield test_chat
+    finally:
+        await session.rollback()

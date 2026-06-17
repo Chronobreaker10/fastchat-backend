@@ -1,10 +1,6 @@
-from uuid import UUID
-
 import pytest
-from domains.chats.models import Chat
 from fastapi import status
 from httpx import AsyncClient
-from sqlalchemy import delete
 from sqlalchemy.ext.asyncio import AsyncSession
 
 
@@ -21,7 +17,3 @@ async def test_create_chat(
     assert response.status_code == status.HTTP_201_CREATED
     assert chat_name in response.json()["message"]
     assert response.json()["details"]["chat_id"]
-    await session.execute(
-        delete(Chat).where(Chat.id == UUID(response.json()["details"]["chat_id"]))
-    )
-    await session.commit()

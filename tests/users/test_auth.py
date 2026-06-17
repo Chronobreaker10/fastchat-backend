@@ -3,7 +3,6 @@ from core.config import settings
 from domains.users.models import User
 from fastapi import status
 from httpx import AsyncClient
-from sqlalchemy import delete
 from sqlalchemy.ext.asyncio import AsyncSession
 
 
@@ -18,8 +17,6 @@ async def test_register_user(client: AsyncClient, session: AsyncSession) -> None
     assert response.status_code == status.HTTP_200_OK
     assert response.json()["access_token"]
     assert response.json()["token_type"] == "Bearer"
-    await session.execute(delete(User).where(User.username == username))
-    await session.commit()
 
 
 @pytest.mark.auth

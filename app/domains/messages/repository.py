@@ -20,22 +20,23 @@ class MessageRepository(BaseRepository[Message]):
     async def get_messages_by_chat_id(
         session: AsyncSession, chat_id: uuid.UUID, pagination: PaginationParams
     ) -> Sequence[Message]:
-        # pag_tuple = tuple_()
-        # if pagination.date is not None:
-        #     pag_tuple.append(pagination.date)
-        # if pagination.entity_id is not None:
-        #     pag_tuple.append(pagination.entity_id)
-        result = await session.scalars(
+        query = (
             select(Message)
             .options(joinedload(Message.sender))
             .where(
                 Message.chat_id == chat_id,
-                # Сортировка KeysetPagination
-                # подходит для больших таблиц при бесконечной ленте
-                tuple_(Message.created_at, Message.id)
-                < (pagination.date, pagination.entity_id),
             )
-            .order_by(Message.created_at.desc(), Message.id.desc())
-            .limit(pagination.limit)
+        )
+        # Сортировка KeysetPagination
+        # подходит для больших таблиц при бесконечной ленте
+        if pagination.date is not None and pagination.entity_id is not None:
+            query = query.where(
+                tuple_(Message.created_at, Message.id)
+                < (pagination.date, pagination.entity_id)
+            )
+        result = await session.scalars(
+            query.order_by(Message.created_at.desc(), Message.id.desc()).limit(
+                pagination.limit
+            )
         )
         return result.all()

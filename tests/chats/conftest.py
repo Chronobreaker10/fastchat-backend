@@ -8,22 +8,6 @@ from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
 
-@pytest.fixture(scope="function", name="test_chat")
-async def create_test_chat(
-    session: AsyncSession, setup_database: None, test_user: User
-) -> AsyncGenerator[Chat, Any]:
-    test_chat = Chat(name="test_chat", user_id=test_user.id)
-    session.add(test_chat)
-    await session.flush()
-    chat_user = ChatUser(chat_id=test_chat.id, user_id=test_user.id)
-    session.add(chat_user)
-    await session.flush()
-    try:
-        yield test_chat
-    finally:
-        await session.rollback()
-
-
 @pytest.fixture(scope="function", name="chat_member")
 async def create_test_chat_member(
     session: AsyncSession, setup_database: None, test_chat: Chat, member: User
