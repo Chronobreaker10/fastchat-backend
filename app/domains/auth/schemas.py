@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime
+from datetime import UTC, datetime
 from enum import StrEnum
 from typing import Annotated
 
@@ -21,7 +21,7 @@ class TokenData(BaseModel):
     iss: Annotated[int | None, Field(title="Издатель токена", ge=1)] = None
 
 
-class JWTTokenPayload(TokenData):
+class JWTPayload(TokenData):
     exp: Annotated[datetime, Field(title="Время истечения срока действия токена")]
     type: Annotated[
         TokenType,
@@ -31,7 +31,7 @@ class JWTTokenPayload(TokenData):
     @field_validator("exp")
     @classmethod
     def check_exp_gt_now(cls, v: datetime) -> datetime:
-        if v < datetime.now():
+        if v < datetime.now(tz=UTC):
             msg = "Expiration time must be greater than now"
             raise ValueError(msg)
         return v

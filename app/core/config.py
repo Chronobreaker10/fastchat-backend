@@ -11,8 +11,14 @@ class ApiConfig(BaseModel):
     description: str = "API для приложения мессенджера Fast Chat"
 
 
+class CorsConfig(BaseModel):
+    allowed_origins: list[str] = Field(
+        default_factory=lambda: ["http://localhost:3000"]
+    )
+
+
 class RunConfig(BaseModel):
-    scheme: str = "http"
+    scheme: Literal["http", "https"] = "http"
     host: str = "localhost"
     port: int = 8000
 
@@ -27,10 +33,10 @@ class DatabaseConfig(BaseModel):
 
 
 class SecurityConfig(BaseModel):
+    cookie_name: str = "fastchat_access_token"
     secret_key: str
     algorithm: str
     expires_minutes: int = 15
-    default_dump: str = "$argon2id$v=19$m=65536,t=3,p=4$dummysalt$dummyhash"
 
 
 class Settings(BaseSettings):
@@ -38,6 +44,7 @@ class Settings(BaseSettings):
     security: SecurityConfig
     env: Literal["prod", "dev", "test"] = "dev"
     default_limit: int = 100
+    cors: CorsConfig = Field(default_factory=CorsConfig)
     run_config: RunConfig = Field(default_factory=RunConfig)
     api_config: ApiConfig = Field(default_factory=ApiConfig)
     model_config = SettingsConfigDict(

@@ -9,6 +9,7 @@ from api.routes import setup_routes
 from core.config import settings
 from core.database import db_helper
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 
 @asynccontextmanager
@@ -23,6 +24,15 @@ app = FastAPI(
     description=settings.api_config.description,
     version=settings.api_config.version,
 )
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.cors.allowed_origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 
 setup_routes(app, prefix=settings.api_config.prefix)
 setup_exceptions(app)

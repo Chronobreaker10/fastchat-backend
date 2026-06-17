@@ -18,14 +18,12 @@ session_factory = async_sessionmaker(
 )
 
 
-@pytest.fixture(autouse=True, scope="session")
-async def setup_database() -> None:
+@pytest.fixture(autouse=True, scope="function")
+async def setup_database() -> AsyncGenerator[None]:
+    """Создает и очищает БД для каждого теста"""
     async with test_engine.begin() as connection:
         await connection.run_sync(Base.metadata.create_all)
-
-
-@pytest.fixture
-async def clear_database() -> None:
+    yield
     async with test_engine.begin() as connection:
         await connection.run_sync(Base.metadata.drop_all)
 
@@ -58,12 +56,13 @@ async def _create_user(
     test_user = User(username=username, hashed_password=password)
     session.add(test_user)
     await session.flush()
-    await session.commit()
+    # await session.commit()
     try:
         yield test_user
     finally:
-        await session.delete(test_user)
-        await session.commit()
+        await session.rollback()
+        # await session.delete(test_user)
+        # await session.commit()
 
 
 @pytest.fixture(scope="function", name="test_user")

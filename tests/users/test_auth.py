@@ -1,4 +1,5 @@
 import pytest
+from core.config import settings
 from domains.users.models import User
 from fastapi import status
 from httpx import AsyncClient
@@ -67,7 +68,7 @@ async def test_get_profile_by_cookie(client: AsyncClient, access_token: str) -> 
 
 @pytest.mark.auth
 async def test_logout_user(client: AsyncClient, access_token: str) -> None:
-    assert client.cookies.get("access_token") is not None
+    assert client.cookies.get(settings.security.cookie_name) is not None
     response = await client.post("/auth/logout")
     assert response.status_code == status.HTTP_200_OK
-    assert client.cookies.get("access_token") is None
+    assert client.cookies.get(settings.security.cookie_name) is None

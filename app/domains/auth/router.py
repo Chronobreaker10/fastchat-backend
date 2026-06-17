@@ -13,8 +13,22 @@ router = APIRouter(
     tags=["Авторизация"],
 )
 
+_COOKIE_PATH = "/"
 
-@router.post("/token", response_model=Token)
+
+def set_jwt_cookie(response: Response, token: Token) -> None:
+    response.set_cookie(
+        settings.security.cookie_name,
+        token.access_token,
+        httponly=True,
+        samesite="lax",
+        secure=settings.run_config.scheme == "https",
+        expires=settings.security.expires_minutes * 60,
+        path=_COOKIE_PATH,
+    )
+
+
+@router.post("/token", summary="Аутентификация в приложении", response_model=Token)
 async def login_user(
     form_data: Annotated[UserAuth, Form()],
     auth_service: AuthServiceDep,
@@ -23,39 +37,31 @@ async def login_user(
     token = await auth_service.login_user(
         form_data.username, form_data.password.get_secret_value()
     )
-    response.set_cookie(
-        "access_token",
-        token.access_token,
-        httponly=True,
-        samesite="lax",
-        expires=settings.security.expires_minutes * 60,
-    )
+    set_jwt_cookie(response, token)
     return token
 
 
-@router.post("/register", response_model=Token)
+@router.post(
+    "/register", summary="Регистрация нового пользователя", response_model=Token
+)
 async def register_user(
     user_data: Annotated[UserCreate, Body(embed=True)],
     auth_service: AuthServiceDep,
     response: Response,
 ) -> Token:
     token = await auth_service.register_user(user_data)
-    response.set_cookie(
-        "access_token",
-        token.access_token,
-        httponly=True,
-        samesite="lax",
-        expires=settings.security.expires_minutes * 60,
-    )
+    set_jwt_cookie(response, token)
     return token
 
 
-@router.post("/logout", response_model=MessageResponse)
+@router.post(
+    "/logout", summary="Выход из учетной записи", response_model=MessageResponse
+)
 async def logout_user(
     current_user: CurrentUserDep,
     response: Response,
 ) -> MessageResponse:
-    response.delete_cookie("access_token")
+    response.delete_cookie(settings.security.cookie_name)
     return MessageResponse(
         message="Вы успешно вышли из аккаунта", details={"user_id": current_user.id}
     )

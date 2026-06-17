@@ -5,7 +5,9 @@ from fastapi.responses import JSONResponse
 
 async def handle_base_http_error(_: Request, exc: BaseHTTPError) -> JSONResponse:
     return JSONResponse(
-        status_code=exc.code, content={"message": exc.message}, headers=exc.headers
+        status_code=exc.code,
+        content={"message": exc.message},
+        headers=getattr(exc, "headers", None),
     )
 
 

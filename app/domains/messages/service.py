@@ -20,7 +20,9 @@ class MessageService:
     async def send_message(
         self, data: MessageCreate, current_user_id: int
     ) -> MessageRead:
-        if not self.chat_repo.is_member(self.session, data.chat_id, current_user_id):
+        if not await self.chat_repo.is_member(
+            self.session, data.chat_id, current_user_id
+        ):
             message = "У вас нет прав на отправку сообщений в этот чат"
             raise ForbiddenError(message)
         data = MessageCreateInDB(**data.model_dump(), sender_id=current_user_id)

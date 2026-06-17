@@ -104,6 +104,7 @@ async def test_join_by_invite_link(
     invite_link: str,
     test_chat: Chat,
 ) -> None:
+    client.cookies.clear()
     response = await client.post(
         invite_link,
         headers={"Authorization": f"Bearer {member_access_token}"},

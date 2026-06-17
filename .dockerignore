@@ -1,12 +1,20 @@
 # .dockerignore
 .venv
+.env*
 venv
 env
 ENV
 __pycache__
 *.pyc
+.pytest_cache
+.ruff_cache
+.uv-cache
+.mypy_cache
 .git
 .gitignore
+.gitlab-ci.yml
+.vscode
+.idea
 README.md
 .env
 *.log

@@ -10,11 +10,17 @@ router = APIRouter(
 )
 
 
-@router.get("/me", response_model=UserRead)
+@router.get(
+    "/me", summary="Получение данных о текущем пользователе", response_model=UserRead
+)
 async def get_profile(current_user: CurrentUserDep) -> UserRead:
     return current_user
 
 
-@router.get("/{username}", response_model=UserRead)
+@router.get(
+    "/{username}",
+    summary="Получение данных пользователя по его имени",
+    response_model=UserRead,
+)
 async def get_user_by_username(username: str, user_service: UserServiceDep) -> UserRead:
     return await user_service.get_user_by_username(username)

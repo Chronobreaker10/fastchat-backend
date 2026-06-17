@@ -6,12 +6,17 @@ services:
     env_file:
       - .env.docker
     volumes:
-      - ./logs:/app/logs
+      - logs:/app/logs
     depends_on:
       postgres:
         condition : service_healthy
     ports:
       - "8000:8000"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
 
   postgres:
     image: postgres:18-alpine
@@ -31,7 +36,14 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
 
 volumes:
   pgdata:
+    driver: local
+  logs:
     driver: local
