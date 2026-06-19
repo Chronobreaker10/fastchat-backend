@@ -40,3 +40,15 @@ class MessageRead(MessageCreateInDB):
 
 class MessageReadWithSender(MessageRead):
     sender: Annotated[UserRead, Field(title="Отправитель сообщения")]
+
+
+class MessageReadWithSenderUsername(MessageRead):
+    sender_username: Annotated[
+        str,
+        Field(
+            min_length=3,
+            max_length=100,
+            title="Имя отправителя",
+            description="Имя отправителя",
+        ),
+    ]

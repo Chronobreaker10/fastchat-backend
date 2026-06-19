@@ -12,7 +12,7 @@ async def test_register_user(client: AsyncClient, session: AsyncSession) -> None
     password = "test_pass"
     response = await client.post(
         "/auth/register",
-        json={"user_data": {"username": username, "password": password}},
+        json={"username": username, "password": password},
     )
     assert response.status_code == status.HTTP_200_OK
     assert response.json()["access_token"]

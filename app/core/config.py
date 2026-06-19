@@ -13,7 +13,7 @@ class ApiConfig(BaseModel):
 
 class CorsConfig(BaseModel):
     allowed_origins: list[str] = Field(
-        default_factory=lambda: ["http://localhost:3000"]
+        default_factory=lambda: ["http://localhost:5173"]
     )
 
 

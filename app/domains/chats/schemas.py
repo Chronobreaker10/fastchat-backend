@@ -4,7 +4,10 @@ from typing import Annotated
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from domains.messages.schemas import MessageRead, MessageReadWithSender
+from domains.messages.schemas import (
+    MessageReadWithSender,
+    MessageReadWithSenderUsername,
+)
 from domains.users.schemas import UserRead
 
 
@@ -41,9 +44,9 @@ class ChatUser(BaseModel):
         datetime,
         Field(title="Дата добавления", description="Когда участник был добавлен в чат"),
     ]
-    invited_user_id: Annotated[
+    invited_id: Annotated[
         int | None,
-        Field(ge=1, title="ID пользователя, пригласившего в чат", alias="invited_id"),
+        Field(ge=1, title="ID пользователя, пригласившего в чат"),
     ]
 
 
@@ -66,9 +69,9 @@ class ChatRead(ChatBase):
         datetime,
         Field(title="Время создания чата"),
     ]
-    last_message: Annotated[MessageRead | None, Field(title="Последнее сообщение")] = (
-        None
-    )
+    last_message: Annotated[
+        MessageReadWithSenderUsername | None, Field(title="Последнее сообщение")
+    ] = None
 
 
 class ChatInDB(ChatCreate):
@@ -77,7 +80,14 @@ class ChatInDB(ChatCreate):
     created_at: datetime
 
 
-class ChatWithMessages(ChatBase):
+class ChatWithMembers(ChatInDB):
+    members: Annotated[
+        list[ChatUser],
+        Field(title="Участники чата", description="Список участников чата"),
+    ]
+
+
+class ChatWithMessages(ChatWithMembers):
     id: Annotated[
         uuid.UUID,
         Field(

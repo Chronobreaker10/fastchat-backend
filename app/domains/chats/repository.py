@@ -14,6 +14,7 @@ from sqlalchemy.orm import (
 from domains.chats.models import Chat, ChatUser
 from domains.chats.schemas import ChatUpdate
 from domains.messages.models import Message
+from domains.users.models import User
 
 
 class ChatRepository(BaseRepository[Chat]):
@@ -95,10 +96,12 @@ class ChatRepository(BaseRepository[Chat]):
                 Message.text.label("message_text"),
                 Message.sender_id.label("sender_id"),
                 Message.created_at.label("sent_at"),
+                User.username.label("sender_username"),
                 row_number.label("row_num"),
             )
             .join(Chat.members)
             .join(Chat.messages, isouter=True)
+            .join(Message.sender, isouter=True)
             .where(ChatUser.user_id == user_id)
         ).subquery()
         query = (

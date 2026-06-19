@@ -45,7 +45,7 @@ async def login_user(
     "/register", summary="Регистрация нового пользователя", response_model=Token
 )
 async def register_user(
-    user_data: Annotated[UserCreate, Body(embed=True)],
+    user_data: Annotated[UserCreate, Body()],
     auth_service: AuthServiceDep,
     response: Response,
 ) -> Token:

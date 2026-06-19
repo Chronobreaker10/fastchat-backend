@@ -16,13 +16,16 @@ from domains.chats.repository import ChatRepository
 from domains.chats.schemas import (
     ChatCreate,
     ChatCreateInDB,
-    ChatInDB,
     ChatRead,
     ChatUpdate,
+    ChatWithMembers,
     ChatWithMessages,
 )
 from domains.messages.repository import MessageRepository
-from domains.messages.schemas import MessageRead, MessageReadWithSender
+from domains.messages.schemas import (
+    MessageReadWithSender,
+    MessageReadWithSenderUsername,
+)
 from domains.users.errors import UserNotFoundError
 from domains.users.models import User
 from domains.users.repository import UserRepository
@@ -160,12 +163,13 @@ class ChatService:
         for chat in chats:
             last_message = None
             if chat["message_id"]:
-                last_message = MessageRead(
+                last_message = MessageReadWithSenderUsername(
                     id=chat["message_id"],
                     created_at=chat["sent_at"],
                     sender_id=chat["sender_id"],
                     text=chat["message_text"],
                     chat_id=chat["id"],
+                    sender_username=chat["sender_username"],
                 )
             result.append(ChatRead(**chat, last_message=last_message))
         return result
@@ -180,7 +184,7 @@ class ChatService:
             self.session, chat_id, pagination
         )
         return ChatWithMessages(
-            **ChatInDB.model_validate(chat).model_dump(),
+            **ChatWithMembers.model_validate(chat).model_dump(),
             messages=[
                 MessageReadWithSender.model_validate(message) for message in messages
             ],
