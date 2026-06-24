@@ -12,6 +12,7 @@ from domains.chats.schemas import (
     ChatWithMessages,
     InvitesResponse,
 )
+from domains.messages.schemas import MessageReadWithSender
 
 router = APIRouter(
     prefix="/chats",
@@ -50,9 +51,22 @@ async def get_chat(
     chat_id: ChatUUIDDep,
     current_user: CurrentUserDep,
     service: ChatServiceDep,
-    pagination: Annotated[Query, Depends(PaginationParams)],
 ) -> ChatWithMessages:
-    return await service.get_chat_by_uuid(chat_id, current_user.id, pagination)
+    return await service.get_chat_by_uuid(chat_id, current_user.id)
+
+
+@router.get(
+    "/{chat_id}/messages",
+    response_model=list[MessageReadWithSender],
+    summary="Получение сообщений чата по ID",
+)
+async def get_chat_messages(
+    chat_id: ChatUUIDDep,
+    current_user: CurrentUserDep,
+    service: ChatServiceDep,
+    pagination: Annotated[Query, Depends(PaginationParams)],
+) -> list[MessageReadWithSender]:
+    return await service.get_messages_by_chat_uuid(chat_id, current_user.id, pagination)
 
 
 @router.put(

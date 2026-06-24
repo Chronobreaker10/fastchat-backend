@@ -9,6 +9,7 @@ from sqlalchemy import select, tuple_
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 
+from core.config import settings
 from domains.messages.models import Message
 
 
@@ -18,7 +19,9 @@ class MessageRepository(BaseRepository[Message]):
 
     @staticmethod
     async def get_messages_by_chat_id(
-        session: AsyncSession, chat_id: uuid.UUID, pagination: PaginationParams
+        session: AsyncSession,
+        chat_id: uuid.UUID,
+        pagination: PaginationParams | None = None,
     ) -> Sequence[Message]:
         query = (
             select(Message)
@@ -29,14 +32,14 @@ class MessageRepository(BaseRepository[Message]):
         )
         # Сортировка KeysetPagination
         # подходит для больших таблиц при бесконечной ленте
-        if pagination.date is not None and pagination.entity_id is not None:
+        if pagination is not None:
             query = query.where(
                 tuple_(Message.created_at, Message.id)
                 < (pagination.date, pagination.entity_id)
             )
         result = await session.scalars(
             query.order_by(Message.created_at.desc(), Message.id.desc()).limit(
-                pagination.limit
+                pagination.limit if pagination is not None else settings.default_limit
             )
         )
         return result.all()

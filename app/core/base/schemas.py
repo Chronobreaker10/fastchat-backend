@@ -10,6 +10,6 @@ class MessageResponse(BaseModel):
 
 
 class PaginationParams(BaseModel):
-    date: Annotated[datetime | None, Field(title="Дата сортировки")] = None
-    entity_id: Annotated[int | None, Field(title="ID сущности")] = None
+    date: Annotated[datetime, Field(title="Дата сортировки")]
+    entity_id: Annotated[int, Field(title="ID сущности")]
     limit: Annotated[int, Field(title="Количество записей на странице", le=100)] = 3

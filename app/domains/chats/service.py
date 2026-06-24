@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import uuid
 
 from core.base.schemas import PaginationParams
@@ -175,20 +177,31 @@ class ChatService:
         return result
 
     async def get_chat_by_uuid(
-        self, chat_id: uuid.UUID, current_user_id: int, pagination: PaginationParams
+        self, chat_id: uuid.UUID, current_user_id: int
     ) -> ChatWithMessages:
         chat = await self._get_chat(chat_id, with_members=True)
         if current_user_id not in [member.user.id for member in chat.members]:
             raise ForbiddenError("Вы не являетесь участником чата " + str(chat_id))
-        messages = await self.message_repo.get_messages_by_chat_id(
-            self.session, chat_id, pagination
-        )
+        messages = await self.message_repo.get_messages_by_chat_id(self.session, chat_id)
         return ChatWithMessages(
             **ChatWithMembers.model_validate(chat).model_dump(),
             messages=[
                 MessageReadWithSender.model_validate(message) for message in messages
             ],
         )
+
+    async def get_messages_by_chat_uuid(
+        self, chat_id: uuid.UUID, current_user_id: int, pagination: PaginationParams
+    ) -> list[MessageReadWithSender]:
+        chat = await self._get_chat(chat_id, with_members=True)
+        if current_user_id not in [member.user.id for member in chat.members]:
+            raise ForbiddenError("Вы не являетесь участником чата " + str(chat_id))
+        messages = await self.message_repo.get_messages_by_chat_id(
+            self.session, chat_id, pagination
+        )
+        return [
+            MessageReadWithSender.model_validate(message) for message in messages
+        ]
 
     async def generate_invite_token(
         self, chat_id: uuid.UUID, current_user_id: int
