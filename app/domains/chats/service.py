@@ -182,12 +182,20 @@ class ChatService:
         chat = await self._get_chat(chat_id, with_members=True)
         if current_user_id not in [member.user.id for member in chat.members]:
             raise ForbiddenError("Вы не являетесь участником чата " + str(chat_id))
-        messages = await self.message_repo.get_messages_by_chat_id(self.session, chat_id)
+        messages = await self.message_repo.get_messages_by_chat_id(
+            self.session, chat_id
+        )
+        messages = [
+            MessageReadWithSender.model_validate(message) for message in messages
+        ]
+        messages.reverse()
+        count_messages = await self.message_repo.get_total_messages_count_by_chat_id(
+            self.session, chat_id
+        )
         return ChatWithMessages(
             **ChatWithMembers.model_validate(chat).model_dump(),
-            messages=[
-                MessageReadWithSender.model_validate(message) for message in messages
-            ],
+            messages=messages,
+            total_messages=count_messages,
         )
 
     async def get_messages_by_chat_uuid(
@@ -199,9 +207,11 @@ class ChatService:
         messages = await self.message_repo.get_messages_by_chat_id(
             self.session, chat_id, pagination
         )
-        return [
+        messages = [
             MessageReadWithSender.model_validate(message) for message in messages
         ]
+        messages.reverse()
+        return messages
 
     async def generate_invite_token(
         self, chat_id: uuid.UUID, current_user_id: int

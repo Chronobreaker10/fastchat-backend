@@ -29,4 +29,4 @@ async def get_invite_link(
         f"/chats/{test_chat.id}/invite",
         headers={"Authorization": f"Bearer {access_token}"},
     )
-    return response.json()["link"]
+    return response.json()["token"]

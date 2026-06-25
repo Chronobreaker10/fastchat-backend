@@ -62,7 +62,6 @@ async def test_join_by_non_existing_chat_invite_link(
     member_access_token: str,
     member: User,
     test_user: User,
-    invite_link: str,
 ) -> None:
     random_chat = uuid.uuid4()
     token = create_jwt_token(
@@ -70,7 +69,8 @@ async def test_join_by_non_existing_chat_invite_link(
         token_type=TokenType.CHAT_INVITE_LINK,
     )
     response = await client.post(
-        f"{client.base_url}chats/invite?invite_token={token}",
+        "/chats/invite",
+        json={"invite_token": token},
         headers={"Authorization": f"Bearer {member_access_token}"},
     )
     assert response.status_code == status.HTTP_404_NOT_FOUND
@@ -87,7 +87,8 @@ async def test_join_already_member_by_invite_link(
     test_chat: Chat,
 ) -> None:
     response = await client.post(
-        invite_link,
+        "/chats/invite",
+        json={"invite_token": invite_link},
         headers={"Authorization": f"Bearer {member_access_token}"},
     )
     assert response.status_code == status.HTTP_409_CONFLICT
@@ -106,7 +107,8 @@ async def test_join_by_invite_link(
 ) -> None:
     client.cookies.clear()
     response = await client.post(
-        invite_link,
+        "/chats/invite",
+        json={"invite_token": invite_link},
         headers={"Authorization": f"Bearer {member_access_token}"},
     )
     assert response.status_code == status.HTTP_200_OK

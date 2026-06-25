@@ -5,11 +5,11 @@ from collections.abc import Sequence
 
 from core.base.repository import BaseRepository
 from core.base.schemas import PaginationParams
-from sqlalchemy import select, tuple_
+from core.config import settings
+from sqlalchemy import func, select, tuple_
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 
-from core.config import settings
 from domains.messages.models import Message
 
 
@@ -43,3 +43,11 @@ class MessageRepository(BaseRepository[Message]):
             )
         )
         return result.all()
+
+    @staticmethod
+    async def get_total_messages_count_by_chat_id(
+        session: AsyncSession, chat_id: uuid.UUID
+    ) -> int:
+        query = select(func.count(Message.id)).where(Message.chat_id == chat_id)
+        result = await session.execute(query)
+        return result.scalar_one()

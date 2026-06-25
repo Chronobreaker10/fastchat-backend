@@ -106,8 +106,16 @@ class ChatWithMessages(ChatWithMembers):
         datetime,
         Field(title="Время создания чата"),
     ]
+    total_messages: Annotated[
+        int,
+        Field(
+            title="Количество сообщений",
+            description="Количество сообщений в чате",
+            ge=0,
+        ),
+    ] = 0
 
 
 class InvitesResponse(BaseModel):
-    link: Annotated[str, Field(title="Ссылка-приглашение")]
+    token: Annotated[str, Field(title="Ссылка-приглашение")]
     chat_name: Annotated[str, Field(title="Название чата")]

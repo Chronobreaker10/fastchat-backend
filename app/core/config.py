@@ -43,7 +43,7 @@ class Settings(BaseSettings):
     database: DatabaseConfig
     security: SecurityConfig
     env: Literal["prod", "dev", "test"] = "dev"
-    default_limit: int = 5
+    default_limit: int = 10
     cors: CorsConfig = Field(default_factory=CorsConfig)
     run_config: RunConfig = Field(default_factory=RunConfig)
     api_config: ApiConfig = Field(default_factory=ApiConfig)

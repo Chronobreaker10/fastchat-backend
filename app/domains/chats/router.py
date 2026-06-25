@@ -1,7 +1,7 @@
 from typing import Annotated
 
 from core.base.schemas import MessageResponse, PaginationParams
-from fastapi import APIRouter, Body, Depends, Path, Query, Request, status
+from fastapi import APIRouter, Body, Depends, Path, Query, status
 
 from domains.auth.dependencies import CurrentUserDep
 from domains.chats.dependencies import ChatServiceDep, ChatUUIDDep
@@ -169,7 +169,9 @@ async def remove_member(
     summary="Присоединиться к чату по токену приглашения",
 )
 async def join_chat_by_invite_link(
-    invite_token: Annotated[str, Query(min_length=1, title="Токен приглашения")],
+    invite_token: Annotated[
+        str, Body(min_length=1, title="Токен приглашения", embed=True)
+    ],
     current_user: CurrentUserDep,
     service: ChatServiceDep,
 ) -> MessageResponse:
@@ -195,12 +197,8 @@ async def generate_invite_link(
     chat_id: ChatUUIDDep,
     current_user: CurrentUserDep,
     service: ChatServiceDep,
-    request: Request,
 ) -> InvitesResponse:
     invite_token, chat_name = await service.generate_invite_token(
         chat_id, current_user.id
     )
-    invite_link = request.url_for("join_chat").include_query_params(
-        invite_token=invite_token
-    )
-    return InvitesResponse(link=str(invite_link), chat_name=chat_name)
+    return InvitesResponse(token=invite_token, chat_name=chat_name)
