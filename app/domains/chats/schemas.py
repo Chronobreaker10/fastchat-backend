@@ -1,6 +1,7 @@
 import uuid
 from datetime import datetime
-from typing import Annotated
+from enum import StrEnum
+from typing import Annotated, Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -9,6 +10,13 @@ from domains.messages.schemas import (
     MessageReadWithSenderUsername,
 )
 from domains.users.schemas import UserRead
+
+
+class ChatEvent(StrEnum):
+    sent_message = "sent_message"
+    left_user = "left_user"
+    joined_user = "joined_user"
+    message_deleted = "message_deleted"
 
 
 class ChatBase(BaseModel):
@@ -119,3 +127,9 @@ class ChatWithMessages(ChatWithMembers):
 class InvitesResponse(BaseModel):
     token: Annotated[str, Field(title="Ссылка-приглашение")]
     chat_name: Annotated[str, Field(title="Название чата")]
+
+
+class WebsocketEvent(BaseModel):
+    event: ChatEvent
+    payload: MessageReadWithSender | str | int
+    details: Any | None = None

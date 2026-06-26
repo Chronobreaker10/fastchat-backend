@@ -80,7 +80,7 @@ class ChatService:
 
     async def add_member_to_chat_by_username(
         self, chat_id: uuid.UUID, username: str, current_user_id: int
-    ) -> str:
+    ) -> tuple[str, User]:
         chat = await self._get_chat(chat_id, with_members=True)
         # if not await self.chat_repo.is_member(self.session, chat_id, current_user_id):
         if current_user_id not in [member.user.id for member in chat.members]:
@@ -97,7 +97,7 @@ class ChatService:
             raise AlreadyMemberChatError(message)
         await self.chat_repo.add_member(self.session, chat_id, user.id, current_user_id)
         await self.session.commit()
-        return chat.name
+        return chat.name, user
 
     async def remove_member_from_chat(
         self, chat_id: uuid.UUID, user_id: int, current_user_id: int
@@ -242,3 +242,10 @@ class ChatService:
         )
         await self.session.commit()
         return chat, invited_user.username
+
+    async def is_member(self, chat_id: uuid.UUID, current_user_id: int) -> bool:
+        if not await self.chat_repo.is_member(self.session, chat_id, current_user_id):
+            raise ForbiddenError(
+                "У вас нет прав на получение сообщений в чате " + str(chat_id)
+            )
+        return True

@@ -8,6 +8,7 @@ from api.middlewares import setup_middlewares
 from api.routes import setup_routes
 from core.config import settings
 from core.database import db_helper
+from core.websocket_manager import websocket_manager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -16,6 +17,7 @@ from fastapi.middleware.cors import CORSMiddleware
 async def lifespan(_: FastAPI) -> AsyncGenerator[None, Any]:
     yield
     await db_helper.dispose()
+    await websocket_manager.dispose()
 
 
 app = FastAPI(

@@ -43,7 +43,8 @@ async def create_chats(count: int = 5, members_count: int = 3) -> None:
             creator = await user_repo.get_by_username(session, choice(list(users)))  # noqa: S311
             if creator is not None:
                 chat_name = fake.sentence(
-                    nb_words=randint(3, 6), variable_nb_words=True  # noqa: S311
+                    nb_words=randint(3, 6),  # noqa: S311
+                    variable_nb_words=True,
                 )[:-1].capitalize()
                 chat = await service.create_chat(creator.id, ChatCreate(name=chat_name))
                 members = sample(
@@ -71,7 +72,7 @@ async def create_messages(count: int = 100) -> None:
         message_repo = MessageRepository()
         user_repo = UserRepository()
         for _i in range(count):
-            chat = choice(chats) # noqa S311
+            chat = choice(chats)  # noqa S311
             chat_obj = chat["chat"]
             members = chat["members"]
             sender = await user_repo.get_by_username(session, choice(members))  # noqa: S311

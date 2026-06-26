@@ -1,18 +1,32 @@
 from typing import Annotated
 
 from core.base.schemas import MessageResponse, PaginationParams
-from fastapi import APIRouter, Body, Depends, Path, Query, status
+from core.websocket_manager import websocket_manager
+from fastapi import (
+    APIRouter,
+    Body,
+    Depends,
+    Path,
+    Query,
+    WebSocket,
+    WebSocketDisconnect,
+    status,
+)
+from pydantic import create_model
 
 from domains.auth.dependencies import CurrentUserDep
 from domains.chats.dependencies import ChatServiceDep, ChatUUIDDep
 from domains.chats.schemas import (
     ChatCreate,
+    ChatEvent,
     ChatRead,
     ChatUpdate,
     ChatWithMessages,
     InvitesResponse,
+    WebsocketEvent,
 )
 from domains.messages.schemas import MessageReadWithSender
+from domains.users.schemas import UserRead
 
 router = APIRouter(
     prefix="/chats",
@@ -113,13 +127,23 @@ async def add_member(
     current_user: CurrentUserDep,
     service: ChatServiceDep,
 ) -> MessageResponse:
-    chat_name = await service.add_member_to_chat_by_username(
+    chat_name, member = await service.add_member_to_chat_by_username(
         chat_id, username, current_user.id
     )
-    return MessageResponse(
-        message=(
-            f"Пользователь {current_user.username} добавил {username} в чат {chat_name}"
+    message = (
+        f"Пользователь {current_user.username} добавил {username} в чат {chat_name}"
+    )
+    chat_user_model = create_model("ChatUserModel", user=(UserRead, ...))
+    await websocket_manager.chat_broadcast(
+        WebsocketEvent(
+            event=ChatEvent.joined_user,
+            payload=message,
+            details=chat_user_model(user=member),
         ),
+        chat_id,
+    )
+    return MessageResponse(
+        message=message,
         details={"chat_id": chat_id},
     )
 
@@ -136,8 +160,16 @@ async def leave_chat(
     service: ChatServiceDep,
 ) -> MessageResponse:
     chat_name = await service.leave_chat(chat_id, current_user.id)
+    await websocket_manager.remove_from_chat_by_user_id(current_user.id, chat_id)
+    message = f"Пользователь {current_user.username} покинул чат {chat_name}"
+    await websocket_manager.chat_broadcast(
+        WebsocketEvent(
+            event=ChatEvent.left_user, payload=message, details=current_user.id
+        ),
+        chat_id,
+    )
     return MessageResponse(
-        message=f"Пользователь {current_user.username} покинул чат {chat_name}",
+        message=message,
         details={"chat_id": chat_id},
     )
 
@@ -156,6 +188,12 @@ async def remove_member(
     chat_name, username = await service.remove_member_from_chat(
         chat_id, user_id, current_user.id
     )
+    message = f"Пользователь {username} удален из чата {chat_name}"
+    await websocket_manager.chat_broadcast(
+        WebsocketEvent(event=ChatEvent.left_user, payload=message, details=user_id),
+        chat_id,
+    )
+    await websocket_manager.remove_from_chat_by_user_id(user_id, chat_id)
     return MessageResponse(
         message=f"Пользователь {username} удален из чата {chat_name}",
         details={"chat_id": chat_id},
@@ -178,12 +216,22 @@ async def join_chat_by_invite_link(
     chat, invited_name = await service.add_member_to_chat_by_invite_token(
         invite_token, current_user.id
     )
-    return MessageResponse(
-        message=(
-            f"Пользователь {current_user.username} "
-            f"присоединился к чату {chat.name} "
-            f"по приглашению {invited_name}"
+    chat_user_model = create_model("ChatUserModel", user=(UserRead, ...))
+    message = (
+        f"Пользователь {current_user.username} "
+        f"присоединился к чату {chat.name} "
+        f"по приглашению {invited_name}"
+    )
+    await websocket_manager.chat_broadcast(
+        WebsocketEvent(
+            event=ChatEvent.joined_user,
+            payload=message,
+            details=chat_user_model(user=current_user),
         ),
+        chat.id,
+    )
+    return MessageResponse(
+        message=message,
         details={"chat_id": chat.id},
     )
 
@@ -202,3 +250,19 @@ async def generate_invite_link(
         chat_id, current_user.id
     )
     return InvitesResponse(token=invite_token, chat_name=chat_name)
+
+
+@router.websocket("/{chat_id}/ws")
+async def receive_messages(
+    websocket: WebSocket,
+    chat_id: ChatUUIDDep,
+    current_user: CurrentUserDep,
+    service: ChatServiceDep,
+) -> None:
+    if await service.is_member(chat_id, current_user.id):
+        await websocket_manager.connect_to_chat(websocket, chat_id, current_user.id)
+        try:
+            while True:
+                await websocket.receive_text()
+        except WebSocketDisconnect:
+            websocket_manager.disconnect_from_chat(websocket, chat_id)

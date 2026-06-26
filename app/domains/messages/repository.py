@@ -51,3 +51,8 @@ class MessageRepository(BaseRepository[Message]):
         query = select(func.count(Message.id)).where(Message.chat_id == chat_id)
         result = await session.execute(query)
         return result.scalar_one()
+
+    @staticmethod
+    async def delete_message(session: AsyncSession, message: Message) -> None:
+        await session.delete(message)
+        await session.flush()
