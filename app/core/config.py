@@ -13,7 +13,11 @@ class ApiConfig(BaseModel):
 
 class CorsConfig(BaseModel):
     allowed_origins: list[str] = Field(
-        default_factory=lambda: ["http://localhost:5173"]
+        default_factory=lambda: [
+            "http://localhost:5173",
+            "http://localhost:8080",
+            "http://localhost:8081",
+        ]
     )
 
 
@@ -32,6 +36,12 @@ class DatabaseConfig(BaseModel):
     max_overflow: int = 10
 
 
+class RedisConfig(BaseModel):
+    host: str = "localhost"
+    port: int = 6379
+    db: int = 0
+
+
 class SecurityConfig(BaseModel):
     cookie_name: str = "fastchat_access_token"
     secret_key: str
@@ -41,6 +51,7 @@ class SecurityConfig(BaseModel):
 
 class Settings(BaseSettings):
     database: DatabaseConfig
+    redis: RedisConfig
     security: SecurityConfig
     env: Literal["prod", "dev", "test"] = "dev"
     default_limit: int = 10

@@ -1,6 +1,7 @@
 from typing import Annotated
 
 from core.base.schemas import MessageResponse, PaginationParams
+from core.redis import get_redis
 from core.websocket_manager import websocket_manager
 from fastapi import (
     APIRouter,
@@ -21,6 +22,7 @@ from domains.chats.schemas import (
     ChatEvent,
     ChatRead,
     ChatUpdate,
+    ChatWebsocket,
     ChatWithMessages,
     InvitesResponse,
     WebsocketEvent,
@@ -138,7 +140,7 @@ async def add_member(
         WebsocketEvent(
             event=ChatEvent.joined_user,
             payload=message,
-            details=chat_user_model(user=member),
+            details=chat_user_model(user=UserRead.model_validate(member)),
         ),
         chat_id,
     )
@@ -263,6 +265,18 @@ async def receive_messages(
         await websocket_manager.connect_to_chat(websocket, chat_id, current_user.id)
         try:
             while True:
-                await websocket.receive_text()
+                await websocket.receive_json()
         except WebSocketDisconnect:
             websocket_manager.disconnect_from_chat(websocket, chat_id)
+
+
+async def subscribe_to_messages() -> None:
+    redis = get_redis()
+    pubsub = redis.pubsub()
+    await pubsub.subscribe("chat_websockets")
+    async for message in pubsub.listen():
+        if message["type"] == "message":
+            data = ChatWebsocket.model_validate_json(message["data"].decode())
+            await websocket_manager.chat_broadcast(
+                data.websocket_data, data.chat_id, is_published=True
+            )

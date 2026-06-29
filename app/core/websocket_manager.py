@@ -1,8 +1,10 @@
 from dataclasses import dataclass
 from uuid import UUID
 
-from domains.chats.schemas import WebsocketEvent
+from domains.chats.schemas import ChatWebsocket, WebsocketEvent
 from fastapi import WebSocket
+
+from core.redis import get_redis
 
 
 @dataclass(frozen=True, slots=True)
@@ -50,10 +52,18 @@ class WebSocketConnectionManager:
     # async def send_personal_message(self, message: str, websocket: WebSocket):
     #     await websocket.send_text(message)
 
-    async def chat_broadcast(self, data: WebsocketEvent, chat_id: UUID) -> None:
-        if chat_id in self.chat_connections:
+    async def chat_broadcast(
+        self, data: WebsocketEvent, chat_id: UUID, is_published: bool = False
+    ) -> None:
+        if not is_published:
+            redis = get_redis()
+            await redis.publish(
+                "chat_websockets",
+                ChatWebsocket(chat_id=chat_id, websocket_data=data).model_dump_json(),
+            )
+        elif chat_id in self.chat_connections:
             for connection in self.chat_connections[chat_id]:
-                await connection.websocket.send_text(data.model_dump_json())
+                await connection.websocket.send_json(data.model_dump(mode="json"))
 
     async def dispose(self) -> None:
         for chat_connection in self.chat_connections.values():

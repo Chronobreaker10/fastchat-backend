@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import uuid
 from datetime import datetime
 from enum import StrEnum
@@ -133,3 +135,8 @@ class WebsocketEvent(BaseModel):
     event: ChatEvent
     payload: MessageReadWithSender | str | int
     details: Any | None = None
+
+
+class ChatWebsocket(BaseModel):
+    chat_id: uuid.UUID
+    websocket_data: WebsocketEvent

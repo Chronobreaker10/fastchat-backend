@@ -3,8 +3,8 @@ set shell := ["powershell", "-c"]
 @a_default:
     just --list
 
-@run:
-    uv run fastapi run
+@run port="8000":
+    uv run fastapi run --port {{port}}
 
 @lint:
     uv run ruff check --fix

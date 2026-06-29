@@ -12,23 +12,22 @@ from domains.auth.service import AuthService
 from domains.users.repository import UserRepository
 from domains.users.schemas import UserRead
 
-
 # oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/token", auto_error=False)
 
 
 async def get_auth_service(
-        session: SessionDep,
-        repo: Annotated[UserRepository, Depends(UserRepository)],
+    session: SessionDep,
+    repo: Annotated[UserRepository, Depends(UserRepository)],
 ) -> AuthService:
     return AuthService(repo, session)
 
 
 async def get_current_user(
-        auth_service: AuthServiceDep,
-        auth_header: Annotated[str | None, Header(alias="Authorization")] = None,
-        auth_cookie: Annotated[
-            str | None, Cookie(alias=settings.security.cookie_name)
-        ] = None,
+    auth_service: AuthServiceDep,
+    auth_header: Annotated[str | None, Header(alias="Authorization")] = None,
+    auth_cookie: Annotated[
+        str | None, Cookie(alias=settings.security.cookie_name)
+    ] = None,
 ) -> UserRead:
     token = None
     if auth_cookie is not None:

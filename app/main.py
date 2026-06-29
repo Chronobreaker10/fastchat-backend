@@ -1,3 +1,4 @@
+import asyncio
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from typing import Any
@@ -8,14 +9,20 @@ from api.middlewares import setup_middlewares
 from api.routes import setup_routes
 from core.config import settings
 from core.database import db_helper
+from core.redis import get_redis
 from core.websocket_manager import websocket_manager
+from domains.chats.router import subscribe_to_messages
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 
 @asynccontextmanager
 async def lifespan(_: FastAPI) -> AsyncGenerator[None, Any]:
+    redis = get_redis()
+    subscribe_messages_task = asyncio.create_task(subscribe_to_messages())
     yield
+    subscribe_messages_task.cancel()
+    await redis.aclose()
     await db_helper.dispose()
     await websocket_manager.dispose()
 
