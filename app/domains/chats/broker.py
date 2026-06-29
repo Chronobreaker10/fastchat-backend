@@ -3,8 +3,6 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 from uuid import UUID
 
-from _testcapi import awaitType
-
 from core.config import settings
 from redis.asyncio import Redis
 

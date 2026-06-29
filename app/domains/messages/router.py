@@ -2,10 +2,10 @@ from typing import Annotated
 
 from core.base.schemas import MessageResponse
 from core.dependencies import WebSocketManagerDep
-from domains.chats.dependencies import ChatBrokerDep
 from fastapi import APIRouter, Path, status
 
 from domains.auth.dependencies import CurrentUserDep
+from domains.chats.dependencies import ChatBrokerDep
 from domains.chats.schemas import ChatEvent, WebsocketEvent
 from domains.messages.dependencies import MessageServiceDep
 from domains.messages.schemas import MessageCreate, MessageReadWithSender

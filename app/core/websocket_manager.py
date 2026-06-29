@@ -3,7 +3,7 @@ from functools import cache
 from uuid import UUID
 
 from domains.chats.broker import ChatBroker
-from domains.chats.schemas import WebsocketEvent, ChatEvent
+from domains.chats.schemas import ChatEvent, WebsocketEvent
 from fastapi import WebSocket
 
 
@@ -38,7 +38,9 @@ class WebSocketConnectionManager:
                 if connection.websocket != websocket
             ]
 
-    async def close_connection(self, chat_id: UUID, user_id: int, websocket: WebSocket, broker: ChatBroker):
+    async def close_connection(
+        self, chat_id: UUID, user_id: int, websocket: WebSocket, broker: ChatBroker
+    ) -> None:
         self.disconnect_from_chat(websocket, chat_id)
         await broker.remove_user(user_id, chat_id)
         await self.chat_broadcast(
@@ -49,8 +51,11 @@ class WebSocketConnectionManager:
             chat_id,
             broker,
         )
+        await websocket.close()
 
-    async def close_all_user_connections(self, user_id: int, broker: ChatBroker) -> None:
+    async def close_all_user_connections(
+        self, user_id: int, broker: ChatBroker
+    ) -> None:
         for chat_id in self.chat_connections:
             user_connections = [
                 connection
@@ -58,8 +63,9 @@ class WebSocketConnectionManager:
                 if connection.user_id == user_id
             ]
             for connection in user_connections:
-                await connection.websocket.close()
-                await self.close_connection(chat_id, connection.user_id, connection.websocket, broker)
+                await self.close_connection(
+                    chat_id, connection.user_id, connection.websocket, broker
+                )
 
     async def remove_from_chat_by_user_id(self, user_id: int, chat_id: UUID) -> None:
         if chat_id in self.chat_connections:

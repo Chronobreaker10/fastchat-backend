@@ -287,4 +287,6 @@ async def receive_messages(
             while True:
                 await websocket.receive_json()
         except WebSocketDisconnect:
-            await websocket_manager.close_connection(chat_id, current_user.id, websocket, broker)
+            await websocket_manager.close_connection(
+                chat_id, current_user.id, websocket, broker
+            )
