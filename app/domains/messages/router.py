@@ -1,7 +1,8 @@
 from typing import Annotated
 
 from core.base.schemas import MessageResponse
-from core.websocket_manager import websocket_manager
+from core.dependencies import WebSocketManagerDep
+from domains.chats.dependencies import ChatBrokerDep
 from fastapi import APIRouter, Path, status
 
 from domains.auth.dependencies import CurrentUserDep
@@ -22,7 +23,11 @@ router = APIRouter(
     status_code=status.HTTP_201_CREATED,
 )
 async def send_message(
-    current_user: CurrentUserDep, service: MessageServiceDep, data: MessageCreate
+    current_user: CurrentUserDep,
+    service: MessageServiceDep,
+    data: MessageCreate,
+    websocket_manager: WebSocketManagerDep,
+    chat_broker: ChatBrokerDep,
 ) -> MessageResponse:
     message = await service.send_message(data, current_user.id)
     await websocket_manager.chat_broadcast(
@@ -31,6 +36,7 @@ async def send_message(
             payload=MessageReadWithSender(**message.model_dump(), sender=current_user),
         ),
         data.chat_id,
+        chat_broker,
     )
     return MessageResponse(
         message="Сообщение успешно отправлено", details={"message": message}
@@ -47,11 +53,14 @@ async def delete_message(
     current_user: CurrentUserDep,
     service: MessageServiceDep,
     message_id: Annotated[int, Path(title="ID сообщения")],
+    websocket_manager: WebSocketManagerDep,
+    chat_broker: ChatBrokerDep,
 ) -> MessageResponse:
     message = await service.delete_message(message_id, current_user.id)
     await websocket_manager.chat_broadcast(
         WebsocketEvent(event=ChatEvent.message_deleted, payload=message.id),
         message.chat_id,
+        chat_broker,
     )
     return MessageResponse(
         message="Сообщение успешно удалено", details={"message_id": message.id}

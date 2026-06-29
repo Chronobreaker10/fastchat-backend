@@ -19,6 +19,8 @@ class ChatEvent(StrEnum):
     left_user = "left_user"
     joined_user = "joined_user"
     message_deleted = "message_deleted"
+    connect_user = "connect_user"
+    disconnect_user = "disconnect_user"
 
 
 class ChatBase(BaseModel):
@@ -124,6 +126,10 @@ class ChatWithMessages(ChatWithMembers):
             ge=0,
         ),
     ] = 0
+    online_members: Annotated[
+        list[int],
+        Field(title="Идентификаторы online пользователей", default_factory=list),
+    ]
 
 
 class InvitesResponse(BaseModel):

@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from domains.auth.errors import ForbiddenError
 from domains.auth.schemas import TokenType
 from domains.auth.security import create_jwt_token, validate_token
+from domains.chats.broker import ChatBroker
 from domains.chats.errors import (
     AlreadyMemberChatError,
     AlreadyNotMemberChatError,
@@ -39,12 +40,14 @@ class ChatService:
         chat_repo: ChatRepository,
         user_repo: UserRepository,
         message_repo: MessageRepository,
+        chat_broker: ChatBroker,
         session: AsyncSession,
     ) -> None:
         self.chat_repo = chat_repo
         self.user_repo = user_repo
         self.message_repo = message_repo
         self.session = session
+        self.chat_broker = chat_broker
 
     async def _get_chat(
         self, chat_id: uuid.UUID, with_creator: bool = False, with_members: bool = False
@@ -144,6 +147,7 @@ class ChatService:
             raise ForbiddenError("У вас нет прав на удаление чата " + str(chat_id))
         await self.chat_repo.delete_chat(self.session, chat)
         await self.session.commit()
+        await self.chat_broker.delete_chat(chat_id)
         return chat
 
     async def leave_chat(self, chat_id: uuid.UUID, current_user_id: int) -> str:
@@ -192,10 +196,12 @@ class ChatService:
         count_messages = await self.message_repo.get_total_messages_count_by_chat_id(
             self.session, chat_id
         )
+        online_members = await self.chat_broker.get_online_users(chat.id)
         return ChatWithMessages(
             **ChatWithMembers.model_validate(chat).model_dump(),
             messages=messages,
             total_messages=count_messages,
+            online_members=[int(member) for member in online_members],
         )
 
     async def get_messages_by_chat_uuid(

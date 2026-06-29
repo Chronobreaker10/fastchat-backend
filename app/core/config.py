@@ -42,6 +42,11 @@ class RedisConfig(BaseModel):
     db: int = 0
 
 
+class ChatBrokerConfig(BaseModel):
+    broadcast_channel_key: str = "chat-events"
+    online_users_prefix: str = "chat-online-users"
+
+
 class SecurityConfig(BaseModel):
     cookie_name: str = "fastchat_access_token"
     secret_key: str
@@ -58,6 +63,7 @@ class Settings(BaseSettings):
     cors: CorsConfig = Field(default_factory=CorsConfig)
     run_config: RunConfig = Field(default_factory=RunConfig)
     api_config: ApiConfig = Field(default_factory=ApiConfig)
+    chat_broker_config: ChatBrokerConfig = Field(default_factory=ChatBrokerConfig)
     model_config = SettingsConfigDict(
         env_file=(".env.template", ".env"),
         case_sensitive=False,

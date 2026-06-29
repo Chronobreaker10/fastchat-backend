@@ -1,10 +1,10 @@
 from dataclasses import dataclass
+from functools import cache
 from uuid import UUID
 
-from domains.chats.schemas import ChatWebsocket, WebsocketEvent
+from domains.chats.broker import ChatBroker
+from domains.chats.schemas import WebsocketEvent, ChatEvent
 from fastapi import WebSocket
-
-from core.redis import get_redis
 
 
 @dataclass(frozen=True, slots=True)
@@ -38,6 +38,29 @@ class WebSocketConnectionManager:
                 if connection.websocket != websocket
             ]
 
+    async def close_connection(self, chat_id: UUID, user_id: int, websocket: WebSocket, broker: ChatBroker):
+        self.disconnect_from_chat(websocket, chat_id)
+        await broker.remove_user(user_id, chat_id)
+        await self.chat_broadcast(
+            WebsocketEvent(
+                event=ChatEvent.disconnect_user,
+                payload=user_id,
+            ),
+            chat_id,
+            broker,
+        )
+
+    async def close_all_user_connections(self, user_id: int, broker: ChatBroker) -> None:
+        for chat_id in self.chat_connections:
+            user_connections = [
+                connection
+                for connection in self.chat_connections[chat_id]
+                if connection.user_id == user_id
+            ]
+            for connection in user_connections:
+                await connection.websocket.close()
+                await self.close_connection(chat_id, connection.user_id, connection.websocket, broker)
+
     async def remove_from_chat_by_user_id(self, user_id: int, chat_id: UUID) -> None:
         if chat_id in self.chat_connections:
             user_connections = [
@@ -53,14 +76,14 @@ class WebSocketConnectionManager:
     #     await websocket.send_text(message)
 
     async def chat_broadcast(
-        self, data: WebsocketEvent, chat_id: UUID, is_published: bool = False
+        self,
+        data: WebsocketEvent,
+        chat_id: UUID,
+        broker: ChatBroker,
+        is_published: bool = False,
     ) -> None:
         if not is_published:
-            redis = get_redis()
-            await redis.publish(
-                "chat_websockets",
-                ChatWebsocket(chat_id=chat_id, websocket_data=data).model_dump_json(),
-            )
+            await broker.publish_event(chat_id, data)
         elif chat_id in self.chat_connections:
             for connection in self.chat_connections[chat_id]:
                 await connection.websocket.send_json(data.model_dump(mode="json"))
@@ -72,4 +95,6 @@ class WebSocketConnectionManager:
         self.chat_connections.clear()
 
 
-websocket_manager = WebSocketConnectionManager()
+@cache
+def get_websocket_manager() -> WebSocketConnectionManager:
+    return WebSocketConnectionManager()
