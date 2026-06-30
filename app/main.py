@@ -22,10 +22,14 @@ async def lifespan(_: FastAPI) -> AsyncGenerator[None, Any]:
     broker = ChatBroker(redis)
     websocket_manager = get_websocket_manager()
     subscribe_messages_task = asyncio.create_task(
-        broker.subscribe_to_events(websocket_manager)
+        broker.subscribe_to_chat_events(websocket_manager)
+    )
+    subscribe_closed_connections_task = asyncio.create_task(
+        broker.subscribe_to_closed_connections_event(websocket_manager)
     )
     yield
     subscribe_messages_task.cancel()
+    subscribe_closed_connections_task.cancel()
     await redis.aclose()
     await db_helper.dispose()
     await websocket_manager.dispose()

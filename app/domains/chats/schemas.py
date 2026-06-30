@@ -3,7 +3,7 @@ from __future__ import annotations
 import uuid
 from datetime import datetime
 from enum import StrEnum
-from typing import Annotated, Any
+from typing import Annotated
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -137,12 +137,22 @@ class InvitesResponse(BaseModel):
     chat_name: Annotated[str, Field(title="Название чата")]
 
 
+class ChatEventUserInfo(BaseModel):
+    user: UserRead
+
+
 class WebsocketEvent(BaseModel):
     event: ChatEvent
     payload: MessageReadWithSender | str | int
-    details: Any | None = None
+    details: ChatEventUserInfo | int | None = None
 
 
 class ChatWebsocket(BaseModel):
     chat_id: uuid.UUID
     websocket_data: WebsocketEvent
+
+
+class ClosedConnectionEvent(BaseModel):
+    user_id: int
+    chat_id: uuid.UUID
+    removed: bool = False

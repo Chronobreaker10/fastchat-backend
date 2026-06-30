@@ -12,13 +12,13 @@ from fastapi import (
     WebSocketDisconnect,
     status,
 )
-from pydantic import create_model
 
 from domains.auth.dependencies import CurrentUserDep
-from domains.chats.dependencies import ChatBrokerDep, ChatServiceDep, ChatUUIDDep
+from domains.chats.dependencies import ChatServiceDep, ChatUUIDDep
 from domains.chats.schemas import (
     ChatCreate,
     ChatEvent,
+    ChatEventUserInfo,
     ChatRead,
     ChatUpdate,
     ChatWithMessages,
@@ -124,7 +124,6 @@ async def add_member(
     ],
     current_user: CurrentUserDep,
     service: ChatServiceDep,
-    broker: ChatBrokerDep,
     websocket_manager: WebSocketManagerDep,
 ) -> MessageResponse:
     chat_name, member = await service.add_member_to_chat_by_username(
@@ -133,15 +132,13 @@ async def add_member(
     message = (
         f"Пользователь {current_user.username} добавил {username} в чат {chat_name}"
     )
-    chat_user_model = create_model("ChatUserModel", user=(UserRead, ...))
     await websocket_manager.chat_broadcast(
         WebsocketEvent(
             event=ChatEvent.joined_user,
             payload=message,
-            details=chat_user_model(user=UserRead.model_validate(member)),
+            details=ChatEventUserInfo(user=UserRead.model_validate(member)),
         ),
         chat_id,
-        broker,
     )
     return MessageResponse(
         message=message,
@@ -159,18 +156,18 @@ async def leave_chat(
     chat_id: ChatUUIDDep,
     current_user: CurrentUserDep,
     service: ChatServiceDep,
-    broker: ChatBrokerDep,
     websocket_manager: WebSocketManagerDep,
 ) -> MessageResponse:
     chat_name = await service.leave_chat(chat_id, current_user.id)
-    await websocket_manager.remove_from_chat_by_user_id(current_user.id, chat_id)
+    await websocket_manager.close_user_connections_to_chat(
+        chat_id, current_user.id, is_removed=True
+    )
     message = f"Пользователь {current_user.username} покинул чат {chat_name}"
     await websocket_manager.chat_broadcast(
         WebsocketEvent(
             event=ChatEvent.left_user, payload=message, details=current_user.id
         ),
         chat_id,
-        broker,
     )
     return MessageResponse(
         message=message,
@@ -188,7 +185,6 @@ async def remove_member(
     user_id: Annotated[int, Path(ge=1, title="ID пользователя")],
     current_user: CurrentUserDep,
     service: ChatServiceDep,
-    broker: ChatBrokerDep,
     websocket_manager: WebSocketManagerDep,
 ) -> MessageResponse:
     chat_name, username = await service.remove_member_from_chat(
@@ -198,9 +194,10 @@ async def remove_member(
     await websocket_manager.chat_broadcast(
         WebsocketEvent(event=ChatEvent.left_user, payload=message, details=user_id),
         chat_id,
-        broker,
     )
-    await websocket_manager.remove_from_chat_by_user_id(user_id, chat_id)
+    await websocket_manager.close_user_connections_to_chat(
+        chat_id, user_id, is_removed=True
+    )
     return MessageResponse(
         message=f"Пользователь {username} удален из чата {chat_name}",
         details={"chat_id": chat_id},
@@ -219,13 +216,11 @@ async def join_chat_by_invite_link(
     ],
     current_user: CurrentUserDep,
     service: ChatServiceDep,
-    broker: ChatBrokerDep,
     websocket_manager: WebSocketManagerDep,
 ) -> MessageResponse:
     chat, invited_name = await service.add_member_to_chat_by_invite_token(
         invite_token, current_user.id
     )
-    chat_user_model = create_model("ChatUserModel", user=(UserRead, ...))
     message = (
         f"Пользователь {current_user.username} "
         f"присоединился к чату {chat.name} "
@@ -235,10 +230,9 @@ async def join_chat_by_invite_link(
         WebsocketEvent(
             event=ChatEvent.joined_user,
             payload=message,
-            details=chat_user_model(user=current_user),
+            details=ChatEventUserInfo(user=current_user),
         ),
         chat.id,
-        broker,
     )
     return MessageResponse(
         message=message,
@@ -268,25 +262,16 @@ async def receive_messages(
     chat_id: ChatUUIDDep,
     current_user: CurrentUserDep,
     service: ChatServiceDep,
-    broker: ChatBrokerDep,
     websocket_manager: WebSocketManagerDep,
 ) -> None:
     if await service.is_member(chat_id, current_user.id):
-        await websocket_manager.close_all_user_connections(current_user.id, broker)
+        await websocket_manager.close_user_connections_to_chat(chat_id, current_user.id)
+        await websocket_manager.check_user_limit_connections(current_user.id)
         await websocket_manager.connect_to_chat(websocket, chat_id, current_user.id)
-        await broker.add_user(current_user.id, chat_id)
-        await websocket_manager.chat_broadcast(
-            WebsocketEvent(
-                event=ChatEvent.connect_user,
-                payload=current_user.id,
-            ),
-            chat_id,
-            broker,
-        )
         try:
             while True:
                 await websocket.receive_json()
         except WebSocketDisconnect:
             await websocket_manager.close_connection(
-                chat_id, current_user.id, websocket, broker
+                chat_id, current_user.id, websocket, closed=True
             )

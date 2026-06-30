@@ -45,6 +45,8 @@ class RedisConfig(BaseModel):
 class ChatBrokerConfig(BaseModel):
     broadcast_channel_key: str = "chat-events"
     online_users_prefix: str = "chat-online-users"
+    user_connections_prefix: str = "user-connections"
+    closed_connections_key: str = "closed-connections"
 
 
 class SecurityConfig(BaseModel):
@@ -60,6 +62,7 @@ class Settings(BaseSettings):
     security: SecurityConfig
     env: Literal["prod", "dev", "test"] = "dev"
     default_limit: int = 10
+    websockets_limit_per_user: int = 20
     cors: CorsConfig = Field(default_factory=CorsConfig)
     run_config: RunConfig = Field(default_factory=RunConfig)
     api_config: ApiConfig = Field(default_factory=ApiConfig)

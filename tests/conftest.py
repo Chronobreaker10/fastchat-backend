@@ -1,12 +1,16 @@
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from typing import Any
+from unittest.mock import Mock
 
 import pytest
 from core.base.models import Base
 from core.config import settings
 from core.database import db_helper
+from core.websocket_manager import ConnectionManager, get_websocket_manager
 from domains.auth.security import get_password_hash
+from domains.chats.broker import ChatBroker
+from domains.chats.dependencies import get_chat_broker
 from domains.chats.models import Chat, ChatUser
 from domains.users.models import User
 from httpx import ASGITransport, AsyncClient
@@ -17,6 +21,14 @@ test_engine = create_async_engine("sqlite+aiosqlite:///:memory:")
 session_factory = async_sessionmaker(
     bind=test_engine, autoflush=False, autocommit=False, expire_on_commit=False
 )
+
+
+@pytest.fixture
+def mock_chat_broker() -> Mock:
+    # Создаём мок-объект с нужным методом
+    mock_broker = Mock(spec=ChatBroker)
+    mock_broker.get_online_users.return_value = [1]
+    return mock_broker
 
 
 @pytest.fixture(autouse=True, scope="function")
@@ -36,11 +48,18 @@ async def get_session_override() -> AsyncGenerator[AsyncSession]:
 
 
 @pytest.fixture(name="client")
-async def test_client(session: AsyncSession) -> AsyncGenerator[AsyncClient, Any]:
+async def test_client(
+    session: AsyncSession, mock_chat_broker: Mock
+) -> AsyncGenerator[AsyncClient, Any]:
     async def get_override_session() -> AsyncSession:
         return session
 
+    async def get_override_websocket_manager() -> ConnectionManager:
+        return ConnectionManager()
+
     app.dependency_overrides[db_helper.get_session] = get_override_session
+    app.dependency_overrides[get_websocket_manager] = get_override_websocket_manager
+    app.dependency_overrides[get_chat_broker] = lambda: mock_chat_broker
     async with AsyncClient(
         transport=ASGITransport(app=app),
         base_url=f"http://testhost{settings.api_config.prefix}",
