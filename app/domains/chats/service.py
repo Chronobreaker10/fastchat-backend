@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from domains.auth.errors import ForbiddenError
 from domains.auth.schemas import TokenType
-from domains.auth.security import create_jwt_token, validate_token
+from domains.auth.security import create_jwt_token, decrypt_message, validate_token
 from domains.chats.broker import ChatBroker
 from domains.chats.errors import (
     AlreadyMemberChatError,
@@ -173,7 +173,7 @@ class ChatService:
                     id=chat["message_id"],
                     created_at=chat["sent_at"],
                     sender_id=chat["sender_id"],
-                    text=chat["message_text"],
+                    text=decrypt_message(chat["message_text"]),
                     chat_id=chat["id"],
                     sender_username=chat["sender_username"],
                 )
@@ -190,7 +190,10 @@ class ChatService:
             self.session, chat_id
         )
         messages = [
-            MessageReadWithSender.model_validate(message) for message in messages
+            MessageReadWithSender.model_validate(message).model_copy(
+                update={"text": decrypt_message(message.text)}
+            )
+            for message in messages
         ]
         messages.reverse()
         count_messages = await self.message_repo.get_total_messages_count_by_chat_id(
@@ -214,7 +217,10 @@ class ChatService:
             self.session, chat_id, pagination
         )
         messages = [
-            MessageReadWithSender.model_validate(message) for message in messages
+            MessageReadWithSender.model_validate(message).model_copy(
+                update={"text": decrypt_message(message.text)}
+            )
+            for message in messages
         ]
         messages.reverse()
         return messages

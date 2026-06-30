@@ -1,4 +1,5 @@
 import pytest
+from domains.auth.security import decrypt_message
 from domains.chats.models import Chat
 from domains.messages.models import Message
 from domains.users.models import User
@@ -29,4 +30,4 @@ async def test_send_message(
     assert message_body == data["text"]
     assert data["id"]
     message = await session.scalar(select(Message).where(Message.id == data["id"]))
-    assert message.text == message_body
+    assert decrypt_message(message.text) == message_body

@@ -1,11 +1,13 @@
 import hashlib
 import secrets
+from base64 import urlsafe_b64encode
 from datetime import UTC, datetime, timedelta
 from functools import lru_cache
 from typing import Any
 
 import jwt
 from core.config import settings
+from cryptography.fernet import Fernet
 from pwdlib import PasswordHash
 from pydantic import ValidationError
 
@@ -13,6 +15,9 @@ from domains.auth.errors import UnauthorizedError
 from domains.auth.schemas import JWTPayload, TokenData, TokenType
 
 password_hash = PasswordHash.recommended()
+encrypted_key = settings.security.encryption_key.encode()
+key_hash = hashlib.sha256(encrypted_key).digest()
+fernet = Fernet(urlsafe_b64encode(key_hash))
 
 
 @lru_cache(maxsize=1)
@@ -34,6 +39,14 @@ def generate_refresh_token() -> str:
 
 def hash_token(token: str) -> str:
     return hashlib.sha256(token.encode()).hexdigest()
+
+
+def encrypt_message(message: str) -> str:
+    return fernet.encrypt(message.encode()).decode()
+
+
+def decrypt_message(data: str) -> str:
+    return fernet.decrypt(data.encode()).decode()
 
 
 def create_jwt_token(

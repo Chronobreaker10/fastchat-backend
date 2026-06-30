@@ -1,6 +1,7 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from domains.auth.errors import ForbiddenError
+from domains.auth.security import decrypt_message, encrypt_message
 from domains.chats.repository import ChatRepository
 from domains.messages.errors import MessageNotFoundError
 from domains.messages.models import Message
@@ -34,10 +35,15 @@ class MessageService:
         ):
             message = "У вас нет прав на отправку сообщений в этот чат"
             raise ForbiddenError(message)
-        data = MessageCreateInDB(**data.model_dump(), sender_id=current_user_id)
+        encrypted_data = data.model_copy(update={"text": encrypt_message(data.text)})
+        data = MessageCreateInDB(
+            **encrypted_data.model_dump(), sender_id=current_user_id
+        )
         message = await self.message_repo.create(self.session, data)
         await self.session.commit()
-        return MessageRead.model_validate(message)
+        return MessageRead.model_validate(message).model_copy(
+            update={"text": decrypt_message(message.text)}
+        )
 
     async def delete_message(self, message_id: int, current_user_id: int) -> Message:
         message = await self._get_message(message_id)

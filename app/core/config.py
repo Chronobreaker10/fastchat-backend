@@ -54,6 +54,7 @@ class SecurityConfig(BaseModel):
     secret_key: str
     algorithm: str
     expires_minutes: int = 15
+    encryption_key: str
 
 
 class Settings(BaseSettings):

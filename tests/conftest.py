@@ -1,5 +1,7 @@
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
+from datetime import UTC, datetime, timedelta
+from random import randint
 from typing import Any
 from unittest.mock import Mock
 
@@ -8,11 +10,13 @@ from core.base.models import Base
 from core.config import settings
 from core.database import db_helper
 from core.websocket_manager import ConnectionManager, get_websocket_manager
-from domains.auth.security import get_password_hash
+from domains.auth.security import encrypt_message, get_password_hash
 from domains.chats.broker import ChatBroker
 from domains.chats.dependencies import get_chat_broker
 from domains.chats.models import Chat, ChatUser
+from domains.messages.models import Message
 from domains.users.models import User
+from faker import Faker
 from httpx import ASGITransport, AsyncClient
 from main import app
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
@@ -129,5 +133,48 @@ async def create_test_chat(
     await session.flush()
     try:
         yield test_chat
+    finally:
+        await session.rollback()
+
+
+@pytest.fixture(scope="function", name="test_message")
+async def create_test_message(
+    session: AsyncSession, setup_database: None, test_user: User, test_chat: Chat
+) -> AsyncGenerator[Message, Any]:
+    test_message = Message(
+        text=encrypt_message("Test message"),
+        chat_id=test_chat.id,
+        sender_id=test_user.id,
+    )
+    session.add(test_message)
+    await session.flush()
+    try:
+        yield test_message
+    finally:
+        await session.rollback()
+
+
+@pytest.fixture(scope="function", name="test_messages")
+async def create_test_messages(
+    session: AsyncSession, setup_database: None, test_user: User, test_chat: Chat
+) -> AsyncGenerator[list[Message], Any]:
+    fake = Faker("ru_RU")
+    count_test_messages = 5
+    test_messages = []
+    for i in range(count_test_messages):
+        text = fake.sentence(nb_words=randint(3, 10), variable_nb_words=True)
+        created_at = datetime.now(UTC) - timedelta(minutes=i)
+        test_messages.append(
+            Message(
+                text=encrypt_message(text),
+                chat_id=test_chat.id,
+                sender_id=test_user.id,
+                created_at=created_at,
+            )
+        )
+    session.add_all(test_messages)
+    await session.flush()
+    try:
+        yield test_messages
     finally:
         await session.rollback()

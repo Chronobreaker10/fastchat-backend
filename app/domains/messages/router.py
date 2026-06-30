@@ -41,10 +41,7 @@ async def send_message(
 
 
 @router.delete(
-    "/{message_id}",
-    response_model=MessageResponse,
-    summary="Удаление сообщения",
-    status_code=status.HTTP_201_CREATED,
+    "/{message_id}", response_model=MessageResponse, summary="Удаление сообщения"
 )
 async def delete_message(
     current_user: CurrentUserDep,

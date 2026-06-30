@@ -107,7 +107,7 @@ class ChatRepository(BaseRepository[Chat]):
         query = (
             select(subquery)
             .where(subquery.c.row_num == 1)
-            .order_by(subquery.c.sent_at.desc())
+            .order_by(subquery.c.sent_at.desc().nullslast())
         )
         result = await session.execute(query)
         return result.mappings().all()
