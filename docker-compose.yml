@@ -2,7 +2,7 @@ services:
   fastapi:
     build: .
     container_name: fastchat_service
-    restart: always
+    restart: unless-stopped
     env_file:
       - .env.docker
     volumes:
@@ -10,6 +10,8 @@ services:
     depends_on:
       postgres:
         condition : service_healthy
+      redis:
+        condition: service_healthy
     ports:
       - "8000:8000"
     logging:
@@ -34,6 +36,7 @@ services:
       POSTGRES_DB: postgres
       POSTGRES_PORT: 5432
       PGDATA: /var/lib/postgresql/data/pgdata
+    restart: unless-stopped
     ports:
       - "5442:5432"
     volumes:
@@ -58,10 +61,24 @@ services:
     container_name: fastchat_redis
     ports:
       - "6379:6379"
-    restart: always
+    restart: unless-stopped
     command: [ "redis-server", "--appendonly", "yes" ]
     volumes:
       - redis-data:/data
+    healthcheck:
+      test: [ "CMD-SHELL", "redis-cli ping | grep PONG" ]
+      interval: 3s
+      timeout: 3s
+      retries: 5
+
+  kafka:
+    image: apache/kafka:latest
+    container_name: fastchat_kafka
+    restart: unless-stopped
+    ports:
+      - "9092:9092"
+    volumes:
+      - kafka_data:/var/lib/kafka/data
 
 volumes:
   pgdata:
@@ -69,4 +86,6 @@ volumes:
   redis-data:
     driver: local
   logs:
+    driver: local
+  kafka_data:
     driver: local

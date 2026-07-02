@@ -1,3 +1,5 @@
+from core.base.schemas import NotificationCreate
+from core.publisher import publisher
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from domains.auth.errors import ForbiddenError
@@ -41,6 +43,15 @@ class MessageService:
         )
         message = await self.message_repo.create(self.session, data)
         await self.session.commit()
+        members = await self.chat_repo.get_members_ids(self.session, data.chat_id)
+        for member in members:
+            await publisher.publish(
+                NotificationCreate(
+                    body="Новое сообщение в чате",
+                    chat_id=data.chat_id,
+                    recipient_id=member,
+                ).model_dump(mode="json")
+            )
         return MessageRead.model_validate(message).model_copy(
             update={"text": decrypt_message(message.text)}
         )

@@ -59,6 +59,11 @@ class ChatBrokerConfig(BaseModel):
     closed_connections_key: str = "closed-connections"
 
 
+class KafkaConfig(BaseModel):
+    bootstrap_servers: list[str] = ["localhost:9092"]
+    notifications_topic: str = "notifications"
+
+
 class SecurityConfig(BaseModel):
     access_token_cookie_name: str = "fastchat_access_token"
     refresh_token_cookie_name: str = "fastchat_refresh_token"
@@ -92,6 +97,7 @@ class Settings(BaseSettings):
     run_config: RunConfig = Field(default_factory=RunConfig)
     api_config: ApiConfig = Field(default_factory=ApiConfig)
     chat_broker_config: ChatBrokerConfig = Field(default_factory=ChatBrokerConfig)
+    kafka: KafkaConfig = Field(default_factory=KafkaConfig)
     model_config = SettingsConfigDict(
         env_file=(".env.template", ".env"),
         case_sensitive=False,

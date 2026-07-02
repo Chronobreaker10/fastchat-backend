@@ -128,7 +128,7 @@ class AuthService:
         token_data = validate_token(access_token)
         # user = await self.repo.get_by_id(self.session, int(token_data.sub))
         if token_data.username is None or token_data.user_registered_at is None:
-            raise InvalidCredentialsError
+            raise UnauthorizedError
         return UserRead(
             id=int(token_data.sub),
             username=token_data.username,

@@ -4,6 +4,7 @@ from domains.chats.models import Chat
 from domains.messages.models import Message
 from domains.users.models import User
 from fastapi import status
+from faststream.kafka import TestKafkaBroker
 from httpx import AsyncClient
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -16,6 +17,7 @@ async def test_send_message(
     access_token: str,
     test_chat: Chat,
     test_user: User,
+    kafka_broker: TestKafkaBroker,
 ) -> None:
     message_body = "Hi, everyone!"
     response = await client.post(

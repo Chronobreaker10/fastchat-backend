@@ -127,7 +127,7 @@ async def add_member(
     websocket_manager: WebSocketManagerDep,
 ) -> MessageResponse:
     chat_name, member = await service.add_member_to_chat_by_username(
-        chat_id, username, current_user.id
+        chat_id, username, current_user
     )
     message = (
         f"Пользователь {current_user.username} добавил {username} в чат {chat_name}"
@@ -158,7 +158,7 @@ async def leave_chat(
     service: ChatServiceDep,
     websocket_manager: WebSocketManagerDep,
 ) -> MessageResponse:
-    chat_name = await service.leave_chat(chat_id, current_user.id)
+    chat_name = await service.leave_chat(chat_id, current_user)
     await websocket_manager.close_user_connections_to_chat(
         chat_id, current_user.id, is_removed=True
     )
@@ -188,7 +188,7 @@ async def remove_member(
     websocket_manager: WebSocketManagerDep,
 ) -> MessageResponse:
     chat_name, username = await service.remove_member_from_chat(
-        chat_id, user_id, current_user.id
+        chat_id, user_id, current_user
     )
     message = f"Пользователь {username} удален из чата {chat_name}"
     await websocket_manager.chat_broadcast(
@@ -219,7 +219,7 @@ async def join_chat_by_invite_link(
     websocket_manager: WebSocketManagerDep,
 ) -> MessageResponse:
     chat, invited_name = await service.add_member_to_chat_by_invite_token(
-        invite_token, current_user.id
+        invite_token, current_user
     )
     message = (
         f"Пользователь {current_user.username} "

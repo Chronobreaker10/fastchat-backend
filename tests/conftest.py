@@ -9,6 +9,7 @@ import pytest
 from core.base.models import Base
 from core.config import settings
 from core.database import db_helper
+from core.publisher import broker
 from domains.auth.dependencies import get_session_store
 from domains.auth.security import encrypt_message, get_password_hash
 from domains.auth.session_store import (
@@ -22,6 +23,7 @@ from domains.chats.websocket_manager import ConnectionManager, get_websocket_man
 from domains.messages.models import Message
 from domains.users.models import User
 from faker import Faker
+from faststream.kafka import TestKafkaBroker
 from httpx import ASGITransport, AsyncClient
 from main import app
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
@@ -55,6 +57,12 @@ async def setup_database() -> AsyncGenerator[None]:
 async def get_session_override() -> AsyncGenerator[AsyncSession]:
     async with session_factory() as session:
         yield session
+
+
+@pytest.fixture(name="kafka_broker")
+async def get_broker_override() -> AsyncGenerator[TestKafkaBroker]:
+    async with TestKafkaBroker(broker) as br:
+        yield br
 
 
 @pytest.fixture(name="sessions_store")

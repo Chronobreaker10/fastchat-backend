@@ -39,3 +39,22 @@
 | **ruff**              | форматирование и линтинг кода                   |
 | **uv**                | управления зависимостями                        |
 | **docker**            | запуск и развертывание                          |
+
+## ✨ Запуск проекта
+
+Генерация закрытого ключа: 
+```bash
+openssl genrsa -out private.pem 2048
+mv ./private.pem ./secret-keys/
+```
+
+Генерация открытого ключа из приватного:
+ ``` bash  
+openssl rsa -in private.pem -pubout -out public.pem
+mv ./public.pem ./secret-keys/
+```
+
+Запуск Docker контейнеров
+```bash
+just docker-up
+ ```

@@ -70,6 +70,14 @@ class ChatRepository(BaseRepository[Chat]):
         await session.execute(query)
 
     @staticmethod
+    async def get_members_ids(
+        session: AsyncSession, chat_id: uuid.UUID
+    ) -> Sequence[int]:
+        query = select(ChatUser.user_id).where(ChatUser.chat_id == chat_id)
+        result = await session.execute(query)
+        return result.scalars().all()
+
+    @staticmethod
     async def is_member(
         session: AsyncSession, chat_id: uuid.UUID, user_id: int
     ) -> bool:

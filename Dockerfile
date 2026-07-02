@@ -24,6 +24,9 @@ COPY --chown=appuser:appuser . .
 
 RUN chmod +x /app/entrypoint.sh
 
+RUN chmod +r /app/secret_keys/private.pem
+RUN chmod +r /app/secret_keys/public.pem
+
 USER appuser
 
 ENTRYPOINT ["/app/entrypoint.sh"]
