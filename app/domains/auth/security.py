@@ -51,11 +51,11 @@ def decrypt_message(data: str) -> str:
 
 def create_jwt_token(
     data: dict[str, Any],
-    expires_minutes: int = settings.security.expires_minutes,
+    expires_seconds: int = settings.security.access_token_expires_seconds,
     token_type: TokenType = TokenType.ACCESS,
 ) -> str:
     to_encode = data.copy()
-    expire = datetime.now(tz=UTC) + timedelta(minutes=expires_minutes)
+    expire = datetime.now(tz=UTC) + timedelta(seconds=expires_seconds)
     to_encode.update({"exp": expire, "type": token_type})
     to_encode = JWTPayload(**to_encode).model_dump(exclude_unset=True)
     return jwt.encode(
@@ -74,8 +74,12 @@ def validate_token(token: str, token_type: TokenType = TokenType.ACCESS) -> Toke
             raise UnauthorizedError
         sub = payload.get("sub")
         iss = payload.get("iss")
+        username = payload.get("username")
+        registered_at = payload.get("user_registered_at")
         if sub is None:
             raise UnauthorizedError
-        return TokenData(sub=sub, iss=iss)
+        return TokenData(
+            sub=sub, iss=iss, username=username, user_registered_at=registered_at
+        )
     except (jwt.InvalidTokenError, ValidationError, ValueError) as exc:
         raise UnauthorizedError from exc

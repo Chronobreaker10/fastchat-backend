@@ -50,10 +50,14 @@ class ChatBrokerConfig(BaseModel):
 
 
 class SecurityConfig(BaseModel):
-    cookie_name: str = "fastchat_access_token"
+    access_token_cookie_name: str = "fastchat_access_token"
+    refresh_token_cookie_name: str = "fastchat_refresh_token"
     secret_key: str
     algorithm: str
-    expires_minutes: int = 15
+    access_token_expires_seconds: int = 15 * 60
+    refresh_token_expires_seconds: int = 30 * 24 * 60 * 60
+    user_session_store_prefix: str = "fastchat-user-session"
+    refresh_token_store_prefix: str = "fastchat-refresh-token"
     encryption_key: str
 
 

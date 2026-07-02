@@ -20,9 +20,7 @@ class UserRepository(BaseRepository[User]):
         result = await session.execute(query)
         return result.scalar_one_or_none()
 
-    async def create_user(
-        self, session: AsyncSession, user_data: UserDB
-    ) -> User | None:
+    async def create_user(self, session: AsyncSession, user_data: UserDB) -> User:
         try:
             return await super().create(session=session, obj_in=user_data)
         except IntegrityError:

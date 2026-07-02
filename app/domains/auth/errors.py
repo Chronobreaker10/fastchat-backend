@@ -18,6 +18,11 @@ class InvalidCredentialsError(BaseHTTPError):
         self.headers = {"WWW-Authenticate": "Bearer"}
 
 
+class InvalidIPAddressError(BaseHTTPError):
+    code: int = status.HTTP_422_UNPROCESSABLE_CONTENT
+    message: str = "Некорректный IP адрес"
+
+
 class ForbiddenError(BaseHTTPError):
     code: int = status.HTTP_403_FORBIDDEN
     message: str = "У вас недостаточно прав для выполнения этого действия"

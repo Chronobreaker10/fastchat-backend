@@ -2,12 +2,12 @@ from dataclasses import dataclass
 from functools import cache
 from uuid import UUID
 
-from domains.chats.broker import ChatBroker
-from domains.chats.schemas import ChatEvent, ClosedConnectionEvent, WebsocketEvent
-from fastapi import WebSocket
-
 from core.config import settings
 from core.redis import get_redis
+from fastapi import WebSocket
+
+from domains.chats.broker import ChatBroker
+from domains.chats.schemas import ChatEvent, ClosedConnectionEvent, WebsocketEvent
 
 
 @dataclass(frozen=True, slots=True)

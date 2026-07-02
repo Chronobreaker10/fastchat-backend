@@ -10,7 +10,7 @@ from redis.asyncio import Redis
 from domains.chats.schemas import ChatWebsocket, ClosedConnectionEvent, WebsocketEvent
 
 if TYPE_CHECKING:
-    from core.websocket_manager import WebSocketConnectionManager
+    from domains.chats.websocket_manager import ConnectionManager
 
 
 class ChatBroker:
@@ -50,7 +50,7 @@ class ChatBroker:
         )
 
     async def subscribe_to_chat_events(
-        self, websocket_manager: WebSocketConnectionManager
+        self, websocket_manager: ConnectionManager
     ) -> None:
         pubsub = self.redis.pubsub()
         await pubsub.subscribe(settings.chat_broker_config.broadcast_channel_key)
@@ -62,7 +62,7 @@ class ChatBroker:
                 )
 
     async def subscribe_to_closed_connections_event(
-        self, websocket_manager: WebSocketConnectionManager
+        self, websocket_manager: ConnectionManager
     ) -> None:
         pubsub = self.redis.pubsub()
         await pubsub.subscribe(settings.chat_broker_config.closed_connections_key)

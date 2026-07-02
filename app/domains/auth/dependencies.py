@@ -9,6 +9,7 @@ from fastapi import Cookie, Depends, Header
 # from fastapi.security import OAuth2PasswordBearer
 from domains.auth.errors import UnauthorizedError
 from domains.auth.service import AuthService
+from domains.auth.session_store import SessionStore, get_session_store
 from domains.users.repository import UserRepository
 from domains.users.schemas import UserRead
 
@@ -18,15 +19,16 @@ from domains.users.schemas import UserRead
 async def get_auth_service(
     session: SessionDep,
     repo: Annotated[UserRepository, Depends(UserRepository)],
+    store: Annotated[SessionStore, Depends(get_session_store)],
 ) -> AuthService:
-    return AuthService(repo, session)
+    return AuthService(repo, store, session)
 
 
 async def get_current_user(
     auth_service: AuthServiceDep,
     auth_header: Annotated[str | None, Header(alias="Authorization")] = None,
     auth_cookie: Annotated[
-        str | None, Cookie(alias=settings.security.cookie_name)
+        str | None, Cookie(alias=settings.security.access_token_cookie_name)
     ] = None,
 ) -> UserRead:
     token = None
