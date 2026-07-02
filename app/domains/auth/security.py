@@ -59,7 +59,7 @@ def create_jwt_token(
     to_encode.update({"exp": expire, "type": token_type})
     to_encode = JWTPayload(**to_encode).model_dump(exclude_unset=True)
     return jwt.encode(
-        to_encode, settings.security.secret_key, algorithm=settings.security.algorithm
+        to_encode, settings.security.private_key, algorithm=settings.security.algorithm
     )
 
 
@@ -67,7 +67,7 @@ def validate_token(token: str, token_type: TokenType = TokenType.ACCESS) -> Toke
     try:
         payload = jwt.decode(
             token,
-            settings.security.secret_key,
+            settings.security.public_key,
             algorithms=[settings.security.algorithm],
         )
         if not payload.get("type") == token_type:

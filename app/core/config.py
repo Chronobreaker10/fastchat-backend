@@ -1,7 +1,17 @@
+from functools import cached_property
+from pathlib import Path
 from typing import Literal
 
 from pydantic import BaseModel, Field, PostgresDsn
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+BASE_DIR = Path(__file__).resolve().parent.parent.parent
+SECRET_KEYS_DIR = BASE_DIR / "secret_keys"
+
+Path(SECRET_KEYS_DIR).mkdir(
+    parents=True,
+    exist_ok=True,
+)
 
 
 class ApiConfig(BaseModel):
@@ -59,6 +69,16 @@ class SecurityConfig(BaseModel):
     user_session_store_prefix: str = "fastchat-user-session"
     refresh_token_store_prefix: str = "fastchat-refresh-token"
     encryption_key: str
+
+    @cached_property
+    def private_key(self) -> str:
+        with Path.open(SECRET_KEYS_DIR / "private.pem") as file:
+            return file.read()
+
+    @cached_property
+    def public_key(self) -> str:
+        with Path.open(SECRET_KEYS_DIR / "public.pem") as file:
+            return file.read()
 
 
 class Settings(BaseSettings):
