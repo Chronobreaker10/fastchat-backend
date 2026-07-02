@@ -86,3 +86,7 @@ class UserSession(BaseModel):
             default_factory=lambda: datetime.now(UTC),
         ),
     ]
+
+    @field_serializer("ip")
+    def get_ip_str_value(self, v: int) -> str:
+        return str(v)

@@ -89,9 +89,7 @@ class WebSocketConnectionManager(ConnectionManager):
                 user_id, -settings.websockets_limit_per_user
             )
             for connection in connections:
-                await self.close_user_connections_to_chat(
-                    UUID(connection.decode()), user_id
-                )
+                await self.close_user_connections_to_chat(UUID(connection), user_id)
             await self.broker.remove_connections_by_rank(
                 user_id,
                 -settings.websockets_limit_per_user,

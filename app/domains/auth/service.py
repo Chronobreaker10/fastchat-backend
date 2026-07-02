@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+from datetime import datetime
 from ipaddress import IPv4Address, IPv6Address, ip_address
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -40,7 +41,9 @@ class AuthService:
         return refresh_token
 
     async def _update_session(self, user_session: UserSession) -> str:
-        if old_refresh_token := await self.store.get_key(user_session.user_id):
+        if old_refresh_token := await self.store.get_refresh_token(
+            user_session.user_id
+        ):
             await self.store.delete_session(old_refresh_token)
         return await self._create_session(user_session)
 
@@ -129,10 +132,10 @@ class AuthService:
         return UserRead(
             id=int(token_data.sub),
             username=token_data.username,
-            created_at=token_data.user_registered_at,
+            created_at=datetime.fromisoformat(token_data.user_registered_at),
         )
 
     async def logout_user(self, user: UserRead) -> None:
-        if refresh_token := await self.store.get_key(user.id):
-            await self.store.delete_session(refresh_token)
-            await self.store.delete_key(user.id)
+        if refresh_token := await self.store.get_refresh_token(user.id):
+            # await self.store.delete_session(refresh_token)
+            await self.store.delete_refresh_token(user.id, refresh_token)

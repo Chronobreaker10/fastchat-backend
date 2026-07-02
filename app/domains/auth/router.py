@@ -2,7 +2,7 @@ from typing import Annotated
 
 from core.base.schemas import MessageResponse
 from core.config import settings
-from fastapi import APIRouter, Body, Form, Request, Response
+from fastapi import APIRouter, Body, Cookie, Form, Request, Response
 
 from domains.auth.dependencies import AuthServiceDep, CurrentUserDep
 from domains.auth.schemas import Token, UserAuth
@@ -78,10 +78,12 @@ async def register_user(
 
 @router.post("/refresh", summary="Обновление пары токенов", response_model=Token)
 async def refresh_tokens(
-    refresh_token: Annotated[str, Body(embed=True)],
     auth_service: AuthServiceDep,
     response: Response,
     request: Request,
+    refresh_token: Annotated[
+        str, Cookie(alias=settings.security.refresh_token_cookie_name)
+    ] = "",
 ) -> Token:
     user_ip = get_user_ip(request)
     user_agent = request.headers.get("User-Agent")
@@ -90,7 +92,7 @@ async def refresh_tokens(
     return token
 
 
-@router.post(
+@router.delete(
     "/logout", summary="Выход из учетной записи", response_model=MessageResponse
 )
 async def logout_user(

@@ -56,7 +56,7 @@ class ChatBroker:
         await pubsub.subscribe(settings.chat_broker_config.broadcast_channel_key)
         async for message in pubsub.listen():
             if message["type"] == "message":
-                data = ChatWebsocket.model_validate_json(message["data"].decode())
+                data = ChatWebsocket.model_validate_json(message["data"])
                 await websocket_manager.chat_broadcast(
                     data.websocket_data, data.chat_id, is_published=True
                 )
@@ -68,9 +68,7 @@ class ChatBroker:
         await pubsub.subscribe(settings.chat_broker_config.closed_connections_key)
         async for message in pubsub.listen():
             if message["type"] == "message":
-                data = ClosedConnectionEvent.model_validate_json(
-                    message["data"].decode()
-                )
+                data = ClosedConnectionEvent.model_validate_json(message["data"])
                 await websocket_manager.close_user_connections_to_chat(
                     data.chat_id,
                     data.user_id,

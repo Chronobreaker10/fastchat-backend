@@ -3,17 +3,23 @@ from __future__ import annotations
 from typing import Annotated
 
 from core.config import settings
-from core.dependencies import SessionDep
+from core.dependencies import RedisDep, SessionDep
 from fastapi import Cookie, Depends, Header
 
 # from fastapi.security import OAuth2PasswordBearer
 from domains.auth.errors import UnauthorizedError
 from domains.auth.service import AuthService
-from domains.auth.session_store import SessionStore, get_session_store
+from domains.auth.session_store import RedisSessionStore, SessionStore
 from domains.users.repository import UserRepository
 from domains.users.schemas import UserRead
 
 # oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/token", auto_error=False)
+
+
+async def get_session_store(
+    redis: RedisDep,
+) -> SessionStore:
+    return RedisSessionStore(redis)
 
 
 async def get_auth_service(

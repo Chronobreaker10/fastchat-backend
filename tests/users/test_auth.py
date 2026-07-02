@@ -97,16 +97,16 @@ async def test_logout_user(
 ) -> None:
     assert client.cookies.get(settings.security.access_token_cookie_name) is not None
     assert client.cookies.get(settings.security.refresh_token_cookie_name) is not None
-    refresh_token_hash = await sessions_store.get_key(test_user.id)
+    refresh_token_hash = await sessions_store.get_refresh_token(test_user.id)
     assert refresh_token_hash is not None
     user_session = await sessions_store.get_session(refresh_token_hash)
     assert user_session is not None
     assert user_session.user_id == test_user.id
-    response = await client.post("/auth/logout")
+    response = await client.delete("/auth/logout")
     assert response.status_code == status.HTTP_200_OK
     assert client.cookies.get(settings.security.access_token_cookie_name) is None
     assert client.cookies.get(settings.security.refresh_token_cookie_name) is None
     user_session = await sessions_store.get_session(refresh_token_hash)
     assert user_session is None
-    refresh_token_hash = await sessions_store.get_key(test_user.id)
+    refresh_token_hash = await sessions_store.get_refresh_token(test_user.id)
     assert refresh_token_hash is None

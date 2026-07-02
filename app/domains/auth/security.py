@@ -15,14 +15,18 @@ from domains.auth.errors import UnauthorizedError
 from domains.auth.schemas import JWTPayload, TokenData, TokenType
 
 password_hash = PasswordHash.recommended()
-encrypted_key = settings.security.encryption_key.encode()
-key_hash = hashlib.sha256(encrypted_key).digest()
-fernet = Fernet(urlsafe_b64encode(key_hash))
 
 
 @lru_cache(maxsize=1)
 def get_dummy_hash() -> str:
     return password_hash.hash("dummypassword")
+
+
+@lru_cache(maxsize=1)
+def get_fernet() -> Fernet:
+    encrypted_key = settings.security.encryption_key.encode()
+    key_hash = hashlib.sha256(encrypted_key).digest()
+    return Fernet(urlsafe_b64encode(key_hash))
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
@@ -42,11 +46,11 @@ def hash_token(token: str) -> str:
 
 
 def encrypt_message(message: str) -> str:
-    return fernet.encrypt(message.encode()).decode()
+    return get_fernet().encrypt(message.encode()).decode()
 
 
 def decrypt_message(data: str) -> str:
-    return fernet.decrypt(data.encode()).decode()
+    return get_fernet().decrypt(data.encode()).decode()
 
 
 def create_jwt_token(

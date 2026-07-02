@@ -9,10 +9,11 @@ import pytest
 from core.base.models import Base
 from core.config import settings
 from core.database import db_helper
+from domains.auth.dependencies import get_session_store
 from domains.auth.security import encrypt_message, get_password_hash
 from domains.auth.session_store import (
+    InMemorySessionStore,
     SessionStore,
-    get_session_store,
 )
 from domains.chats.broker import ChatBroker
 from domains.chats.dependencies import get_chat_broker
@@ -29,6 +30,7 @@ test_engine = create_async_engine("sqlite+aiosqlite:///:memory:")
 session_factory = async_sessionmaker(
     bind=test_engine, autoflush=False, autocommit=False, expire_on_commit=False
 )
+session_store = InMemorySessionStore()
 
 
 @pytest.fixture
@@ -57,7 +59,7 @@ async def get_session_override() -> AsyncGenerator[AsyncSession]:
 
 @pytest.fixture(name="sessions_store")
 def get_sessions_store_override() -> SessionStore:
-    return get_session_store()
+    return session_store
 
 
 @pytest.fixture(name="client")
@@ -70,12 +72,9 @@ async def test_client(
     def get_override_websocket_manager() -> ConnectionManager:
         return ConnectionManager()
 
-    def get_override_sessions_store_override() -> SessionStore:
-        return get_sessions_store_override()
-
     app.dependency_overrides[db_helper.get_session] = get_override_session
     app.dependency_overrides[get_websocket_manager] = get_override_websocket_manager
-    # app.dependency_overrides[get_session_store] = get_override_sessions_store_override
+    app.dependency_overrides[get_session_store] = lambda: session_store
     app.dependency_overrides[get_chat_broker] = lambda: mock_chat_broker
     async with AsyncClient(
         transport=ASGITransport(app=app),
