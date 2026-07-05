@@ -1,5 +1,5 @@
 from core.base.schemas import NotificationCreate
-from core.publisher import publisher
+from faststream.kafka.publisher import BatchPublisher
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from domains.auth.errors import ForbiddenError
@@ -16,10 +16,12 @@ class MessageService:
         self,
         message_repo: MessageRepository,
         chat_repo: ChatRepository,
+        publisher: BatchPublisher,
         session: AsyncSession,
     ) -> None:
         self.message_repo = message_repo
         self.chat_repo = chat_repo
+        self.publisher = publisher
         self.session = session
 
     async def _get_message(self, message_id: int) -> Message:
@@ -44,14 +46,16 @@ class MessageService:
         message = await self.message_repo.create(self.session, data)
         await self.session.commit()
         members = await self.chat_repo.get_members_ids(self.session, data.chat_id)
-        for member in members:
-            await publisher.publish(
+        await self.publisher.publish(
+            *[
                 NotificationCreate(
                     body="Новое сообщение в чате",
                     chat_id=data.chat_id,
                     recipient_id=member,
                 ).model_dump(mode="json")
-            )
+                for member in members
+            ]
+        )
         return MessageRead.model_validate(message).model_copy(
             update={"text": decrypt_message(message.text)}
         )

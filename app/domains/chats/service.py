@@ -3,7 +3,7 @@ from __future__ import annotations
 import uuid
 
 from core.base.schemas import NotificationCreate, PaginationParams
-from core.publisher import publisher
+from faststream.kafka.publisher import BatchPublisher
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from domains.auth.errors import ForbiddenError
@@ -43,6 +43,7 @@ class ChatService:
         user_repo: UserRepository,
         message_repo: MessageRepository,
         chat_broker: ChatBroker,
+        publisher: BatchPublisher,
         session: AsyncSession,
     ) -> None:
         self.chat_repo = chat_repo
@@ -50,6 +51,7 @@ class ChatService:
         self.message_repo = message_repo
         self.session = session
         self.chat_broker = chat_broker
+        self.publisher = publisher
 
     async def _get_chat(
         self, chat_id: uuid.UUID, with_creator: bool = False, with_members: bool = False
@@ -102,15 +104,17 @@ class ChatService:
             raise AlreadyMemberChatError(message)
         await self.chat_repo.add_member(self.session, chat_id, user.id, current_user.id)
         await self.session.commit()
-        for member in chat.members:
-            await publisher.publish(
+        await self.publisher.publish(
+            *[
                 NotificationCreate(
                     body=f"Пользователь {current_user.username} добавил "
                     f"{username} в чат {chat.name}",
                     chat_id=chat_id,
                     recipient_id=member.user_id,
                 ).model_dump(mode="json")
-            )
+                for member in chat.members
+            ]
+        )
         return chat.name, user
 
     async def remove_member_from_chat(
@@ -128,14 +132,17 @@ class ChatService:
             raise AlreadyNotMemberChatError(message)
         await self.chat_repo.delete_member(self.session, chat_id, user.id)
         await self.session.commit()
-        for member in chat.members:
-            await publisher.publish(
+        await self.publisher.publish(
+            *[
                 NotificationCreate(
                     body=f"Пользователь {user.username} удален из чата {chat.name}",
                     chat_id=chat_id,
                     recipient_id=member.user_id,
                 ).model_dump(mode="json")
-            )
+                for member in chat.members
+                if member.id != user_id
+            ]
+        )
         return chat.name, user.username
 
     async def create_chat(self, creator_id: int, data: ChatCreate) -> Chat:
@@ -161,32 +168,45 @@ class ChatService:
         await self.session.commit()
 
     async def delete_chat(self, chat_id: uuid.UUID, current_user_id: int) -> Chat:
-        chat = await self._get_chat(chat_id, with_creator=True)
+        chat = await self._get_chat(chat_id, with_creator=True, with_members=True)
         if current_user_id != chat.creator.id:
             raise ForbiddenError("У вас нет прав на удаление чата " + str(chat_id))
         await self.chat_repo.delete_chat(self.session, chat)
         await self.session.commit()
+        await self.publisher.publish(
+            *[
+                NotificationCreate(
+                    body=f"Чат {chat.name} был удален",
+                    chat_id=chat_id,
+                    recipient_id=member.id,
+                ).model_dump(mode="json")
+                for member in chat.members
+            ]
+        )
         await self.chat_broker.delete_chat(chat_id)
         return chat
 
     async def leave_chat(self, chat_id: uuid.UUID, current_user: UserRead) -> str:
-        chat = await self._get_chat(chat_id, with_creator=True)
+        chat = await self._get_chat(chat_id, with_creator=True, with_members=True)
         if not await self.chat_repo.is_member(self.session, chat_id, current_user.id):
             raise AlreadyNotMemberChatError("Вас нет в чате " + chat.name)
         if current_user.id == chat.creator.id:
+            message = f"Чат {chat.name} был удален"
             await self.chat_repo.delete_chat(self.session, chat)
         else:
+            message = f"Пользователь {current_user.username} покинул чат {chat.name}"
             await self.chat_repo.delete_member(self.session, chat_id, current_user.id)
         await self.session.commit()
-        for member in chat.members:
-            await publisher.publish(
+        await self.publisher.publish(
+            *[
                 NotificationCreate(
-                    body=f"Пользователь {current_user.username} "
-                    f"покинул чат {chat.name}",
+                    body=message,
                     chat_id=chat_id,
-                    recipient_id=member.user_id,
+                    recipient_id=member.id,
                 ).model_dump(mode="json")
-            )
+                for member in chat.members
+            ]
+        )
         return chat.name
 
     async def get_user_chats(self, user_id: int) -> list[ChatRead]:
@@ -281,15 +301,18 @@ class ChatService:
             self.session, chat.id, current_user.id, invited_user.id
         )
         await self.session.commit()
-        for member in chat.members:
-            await publisher.publish(
+
+        await self.publisher.publish(
+            *[
                 NotificationCreate(
                     body=f"Пользователь {current_user.username} "
                     f"присоединился к чату {chat.name}",
                     chat_id=chat.id,
                     recipient_id=member.user_id,
                 ).model_dump(mode="json")
-            )
+                for member in chat.members
+            ]
+        )
         return chat, invited_user.username
 
     async def is_member(self, chat_id: uuid.UUID, current_user_id: int) -> bool:

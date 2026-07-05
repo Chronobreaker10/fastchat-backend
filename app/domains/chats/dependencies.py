@@ -1,7 +1,7 @@
 import uuid
 from typing import Annotated
 
-from core.dependencies import RedisDep, SessionDep
+from core.dependencies import KafkaPublisherDep, RedisDep, SessionDep
 from fastapi import Depends, Path
 
 from domains.chats.broker import ChatBroker
@@ -23,8 +23,11 @@ async def get_chat_service(
     user_repo: Annotated[UserRepository, Depends()],
     message_repo: Annotated[MessageRepository, Depends()],
     chat_broker: Annotated[ChatBroker, Depends(get_chat_broker)],
+    publisher: KafkaPublisherDep,
 ) -> ChatService:
-    return ChatService(chat_repo, user_repo, message_repo, chat_broker, session)
+    return ChatService(
+        chat_repo, user_repo, message_repo, chat_broker, publisher, session
+    )
 
 
 ChatServiceDep = Annotated[ChatService, Depends(get_chat_service)]

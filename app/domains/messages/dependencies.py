@@ -1,6 +1,6 @@
 from typing import Annotated
 
-from core.dependencies import SessionDep
+from core.dependencies import KafkaPublisherDep, SessionDep
 from fastapi import Depends
 
 from domains.chats.repository import ChatRepository
@@ -12,8 +12,9 @@ async def get_message_service(
     session: SessionDep,
     message_repo: Annotated[MessageRepository, Depends()],
     chat_repo: Annotated[ChatRepository, Depends()],
+    publisher: KafkaPublisherDep,
 ) -> MessageService:
-    return MessageService(message_repo, chat_repo, session)
+    return MessageService(message_repo, chat_repo, publisher, session)
 
 
 MessageServiceDep = Annotated[MessageService, Depends(get_message_service)]

@@ -22,7 +22,7 @@ class Chat(Base):
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
 
     members: Mapped[list[ChatUser]] = relationship(
-        back_populates="chat", passive_deletes=True
+        back_populates="chat", passive_deletes=True, cascade="all, delete-orphan"
     )
     messages: Mapped[list[Message]] = relationship(
         back_populates="chat",

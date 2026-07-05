@@ -9,7 +9,7 @@ from api.middlewares import setup_middlewares
 from api.routes import setup_routes
 from core.config import settings
 from core.database import db_helper
-from core.publisher import broker
+from core.publisher import get_kafka_broker
 from core.redis import get_redis
 from domains.chats.broker import ChatBroker
 from domains.chats.websocket_manager import get_websocket_manager
@@ -20,6 +20,7 @@ from fastapi.middleware.cors import CORSMiddleware
 @asynccontextmanager
 async def lifespan(_: FastAPI) -> AsyncGenerator[None, Any]:
     redis = get_redis()
+    broker = get_kafka_broker()
     chat_broker = ChatBroker(redis)
     websocket_manager = get_websocket_manager()
     subscribe_messages_task = asyncio.create_task(

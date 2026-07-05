@@ -9,7 +9,7 @@ import pytest
 from core.base.models import Base
 from core.config import settings
 from core.database import db_helper
-from core.publisher import broker
+from core.publisher import get_kafka_broker
 from domains.auth.dependencies import get_session_store
 from domains.auth.security import encrypt_message, get_password_hash
 from domains.auth.session_store import (
@@ -61,8 +61,8 @@ async def get_session_override() -> AsyncGenerator[AsyncSession]:
 
 @pytest.fixture(name="kafka_broker")
 async def get_broker_override() -> AsyncGenerator[TestKafkaBroker]:
-    async with TestKafkaBroker(broker) as br:
-        yield br
+    async with TestKafkaBroker(get_kafka_broker()) as broker:
+        yield broker
 
 
 @pytest.fixture(name="sessions_store")
@@ -72,7 +72,7 @@ def get_sessions_store_override() -> SessionStore:
 
 @pytest.fixture(name="client")
 async def test_client(
-    session: AsyncSession, mock_chat_broker: Mock
+    session: AsyncSession, mock_chat_broker: Mock, kafka_broker: TestKafkaBroker
 ) -> AsyncGenerator[AsyncClient, Any]:
     async def get_override_session() -> AsyncSession:
         return session
@@ -84,6 +84,7 @@ async def test_client(
     app.dependency_overrides[get_websocket_manager] = get_override_websocket_manager
     app.dependency_overrides[get_session_store] = lambda: session_store
     app.dependency_overrides[get_chat_broker] = lambda: mock_chat_broker
+    app.dependency_overrides[get_kafka_broker] = lambda: kafka_broker
     async with AsyncClient(
         transport=ASGITransport(app=app),
         base_url=f"http://testhost{settings.api_config.prefix}",

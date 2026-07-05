@@ -1,7 +1,10 @@
+from functools import cache
+
 from faststream.kafka import KafkaBroker
 
 from core.config import settings
 
-broker = KafkaBroker(settings.kafka.bootstrap_servers)
 
-publisher = broker.publisher(settings.kafka.notifications_topic)
+@cache
+def get_kafka_broker() -> KafkaBroker:
+    return KafkaBroker(settings.kafka.bootstrap_servers)

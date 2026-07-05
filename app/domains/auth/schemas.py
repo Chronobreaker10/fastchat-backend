@@ -3,10 +3,16 @@ from __future__ import annotations
 import uuid
 from datetime import UTC, datetime
 from enum import StrEnum
-from ipaddress import IPv4Address, IPv6Address
 from typing import Annotated
 
-from pydantic import BaseModel, Field, SecretStr, field_serializer, field_validator
+from pydantic import (
+    BaseModel,
+    Field,
+    IPvAnyAddress,
+    SecretStr,
+    field_serializer,
+    field_validator,
+)
 
 
 class TokenType(StrEnum):
@@ -76,7 +82,7 @@ class UserAuth(BaseModel):
 
 
 class UserSession(BaseModel):
-    ip: Annotated[IPv4Address | IPv6Address, Field(title="IP адрес пользователя")]
+    ip: Annotated[IPvAnyAddress, Field(title="IP адрес пользователя")]
     user_agent: Annotated[str | None, Field(min_length=1, max_length=256)]
     user_id: Annotated[int, Field(ge=1, title="Идентификатор пользователя")]
     login_at: Annotated[
