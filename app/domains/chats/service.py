@@ -140,7 +140,7 @@ class ChatService:
                     recipient_id=member.user_id,
                 ).model_dump(mode="json")
                 for member in chat.members
-                if member.id != user_id
+                if member.user_id != user_id
             ]
         )
         return chat.name, user.username
@@ -178,7 +178,7 @@ class ChatService:
                 NotificationCreate(
                     body=f"Чат {chat.name} был удален",
                     chat_id=chat_id,
-                    recipient_id=member.id,
+                    recipient_id=member.user_id,
                 ).model_dump(mode="json")
                 for member in chat.members
             ]
@@ -202,7 +202,7 @@ class ChatService:
                 NotificationCreate(
                     body=message,
                     chat_id=chat_id,
-                    recipient_id=member.id,
+                    recipient_id=member.user_id,
                 ).model_dump(mode="json")
                 for member in chat.members
             ]
