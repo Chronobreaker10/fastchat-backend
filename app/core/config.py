@@ -16,7 +16,7 @@ Path(SECRET_KEYS_DIR).mkdir(
 
 class ApiConfig(BaseModel):
     version: str = "1.0.0"
-    prefix: str = "/api/v1"
+    prefix: str = "/v1"
     title: str = "FastChat API"
     description: str = "API для приложения мессенджера Fast Chat"
 
@@ -24,15 +24,19 @@ class ApiConfig(BaseModel):
 class CorsConfig(BaseModel):
     allowed_origins: list[str] = Field(
         default_factory=lambda: [
-            "http://localhost:5173",
-            "http://localhost:8080",
-            "http://localhost:8081",
+            # "http://localhost:5173",
+            # "http://localhost:8080",
+            # "http://localhost:8081",
+            # "http://localhost:80",
+            # "https://localhost",
+            "http://fastchat_proxy:80",
+            "https://fastchat_proxy:443",
         ]
     )
 
 
 class RunConfig(BaseModel):
-    scheme: Literal["http", "https"] = "http"
+    scheme: Literal["http", "https"] = "https"
     host: str = "localhost"
     port: int = 8000
 
@@ -60,14 +64,17 @@ class ChatBrokerConfig(BaseModel):
 
 
 class KafkaConfig(BaseModel):
-    bootstrap_servers: list[str] = ["localhost:9092"]
+    bootstrap_server: str = "localhost:9092"
     notifications_topic: str = "notifications"
+
+    @property
+    def bootstrap_servers(self) -> list[str]:
+        return [self.bootstrap_server]
 
 
 class SecurityConfig(BaseModel):
     access_token_cookie_name: str = "fastchat_access_token"
     refresh_token_cookie_name: str = "fastchat_refresh_token"
-    secret_key: str
     algorithm: str
     access_token_expires_seconds: int = 15 * 60
     refresh_token_expires_seconds: int = 30 * 24 * 60 * 60

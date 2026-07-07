@@ -14,6 +14,18 @@ services:
         condition: service_healthy
     ports:
       - "8000:8000"
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/docs', timeout=3)",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
     logging:
       driver: "json-file"
       options:
@@ -26,6 +38,8 @@ services:
           cpus: "1.0"
         reservations:
           memory: 256M
+    networks:
+      - fastchat-net
 
   postgres:
     image: postgres:18-alpine
@@ -55,6 +69,8 @@ services:
       resources:
         limits:
           memory: 1G
+    networks:
+      - fastchat-net
 
   redis:
     image: redis:8-alpine
@@ -70,15 +86,52 @@ services:
       interval: 3s
       timeout: 3s
       retries: 5
+    networks:
+      - fastchat-net
 
   kafka:
-    image: apache/kafka:latest
+    image: apache/kafka:4.3.1
     container_name: fastchat_kafka
     restart: unless-stopped
     ports:
       - "9092:9092"
     volumes:
       - kafka_data:/var/lib/kafka/data
+    environment:
+      # Обязательные параметры для KRaft
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: "broker,controller"
+      KAFKA_CONTROLLER_QUORUM_VOTERS: "1@localhost:9093"
+      KAFKA_LISTENERS: "PLAINTEXT://:9092,CONTROLLER://:9093"
+      KAFKA_ADVERTISED_LISTENERS: "PLAINTEXT://kafka:9092"
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: "PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT"
+      KAFKA_INTER_BROKER_LISTENER_NAME: "PLAINTEXT"
+      KAFKA_CONTROLLER_LISTENER_NAMES: "CONTROLLER"
+      # Для автоматического создания топиков (опционально)
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+      # Репликация для внутренних топиков (один узел)
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_MIN_INSYNC_REPLICAS: 1
+    networks:
+      - fastchat-net
+
+  reverse-proxy:
+    image: nginx:1.31.2
+    container_name: fastchat_proxy
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf
+      - ./certs:/certs
+      - ./dist:/usr/share/nginx/html
+    depends_on:
+      fastapi:
+        condition: service_healthy
+    networks:
+      - fastchat-net
 
 volumes:
   pgdata:
@@ -89,3 +142,7 @@ volumes:
     driver: local
   kafka_data:
     driver: local
+
+networks:
+  fastchat-net:
+    external: true

@@ -45,6 +45,7 @@ app = FastAPI(
     description=settings.api_config.description,
     version=settings.api_config.version,
 )
+# app.frontend("/", directory="dist")
 
 app.add_middleware(
     CORSMiddleware,

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from functools import cache
 from typing import Annotated
 
@@ -7,7 +9,7 @@ from domains.chats.websocket_manager import (
 )
 from fastapi import Depends
 from faststream.kafka import KafkaBroker
-from faststream.kafka.publisher import BatchPublisher
+from faststream.kafka.publisher import BatchPublisher, DefaultPublisher
 from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -20,7 +22,7 @@ from core.redis import get_redis
 @cache
 def get_kafka_publisher(
     broker: Annotated[KafkaBroker, Depends(get_kafka_broker)],
-) -> BatchPublisher:
+) -> BatchPublisher | DefaultPublisher:
     return broker.publisher(settings.kafka.notifications_topic, batch=True)
 
 
