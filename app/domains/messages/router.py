@@ -2,10 +2,10 @@ import asyncio
 from typing import Annotated
 
 from core.base.schemas import MessageResponse
-from core.dependencies import WebSocketManagerDep
 from fastapi import APIRouter, Body, Path, status
 
 from domains.auth.dependencies import CurrentUserDep
+from domains.chats.dependencies import WebSocketManagerDep
 from domains.chats.schemas import ChatEvent, WebsocketEvent
 from domains.messages.dependencies import MessageServiceDep
 from domains.messages.schemas import (
@@ -33,7 +33,7 @@ async def send_message(
     data: MessageCreate,
     websocket_manager: WebSocketManagerDep,
 ) -> MessageResponse:
-    await asyncio.sleep(5)
+    await asyncio.sleep(2)
     message = await service.send_message(data, current_user.id)
     await websocket_manager.chat_broadcast(
         WebsocketEvent(

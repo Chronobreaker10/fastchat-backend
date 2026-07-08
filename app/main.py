@@ -12,7 +12,7 @@ from core.database import db_helper
 from core.publisher import get_kafka_broker
 from core.redis import get_redis
 from domains.chats.broker import ChatBroker
-from domains.chats.websocket_manager import get_websocket_manager
+from domains.chats.dependencies import get_websocket_manager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 

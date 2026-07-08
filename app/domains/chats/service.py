@@ -20,11 +20,15 @@ from domains.chats.repository import ChatRepository
 from domains.chats.schemas import (
     ChatCreate,
     ChatCreateInDB,
+    ChatEvent,
+    ChatEventUserInfo,
     ChatRead,
     ChatUpdate,
     ChatWithMembers,
     ChatWithMessages,
+    WebsocketEvent,
 )
+from domains.chats.websocket_manager import ConnectionManager
 from domains.messages.models import MessageStatus
 from domains.messages.repository import MessageRepository
 from domains.messages.schemas import (
@@ -45,6 +49,7 @@ class ChatService:
         message_repo: MessageRepository,
         chat_broker: ChatBroker,
         publisher: BatchPublisher,
+        websocket_manager: ConnectionManager,
         session: AsyncSession,
     ) -> None:
         self.chat_repo = chat_repo
@@ -53,6 +58,7 @@ class ChatService:
         self.session = session
         self.chat_broker = chat_broker
         self.publisher = publisher
+        self.websocket_manager = websocket_manager
 
     async def _get_chat(
         self, chat_id: uuid.UUID, with_creator: bool = False, with_members: bool = False
@@ -80,7 +86,6 @@ class ChatService:
     ) -> None:
         await self._get_user(user_id)
         chat = await self._get_chat(chat_id, with_members=True)
-        # if await self.chat_repo.is_member(self.session, chat_id, user_id):
         if user_id in [member.user.id for member in chat.members]:
             raise AlreadyMemberChatError
         await self.chat_repo.add_member(self.session, chat_id, user_id, invited_id)
@@ -88,9 +93,8 @@ class ChatService:
 
     async def add_member_to_chat_by_username(
         self, chat_id: uuid.UUID, username: str, current_user: UserRead
-    ) -> tuple[str, User]:
+    ) -> str:
         chat = await self._get_chat(chat_id, with_members=True)
-        # if not await self.chat_repo.is_member(self.session, chat_id, current_user_id):
         if current_user.id not in [member.user.id for member in chat.members]:
             raise ForbiddenError(
                 "У вас нет прав на добавление участника в чат " + str(chat_id)
@@ -99,54 +103,73 @@ class ChatService:
         if user is None:
             message = f"Пользователь с именем {username} не найден"
             raise UserNotFoundError(message)
-        # if await self.chat_repo.is_member(self.session, chat_id, user.id):
         if user.id in [member.user.id for member in chat.members]:
             message = f"Пользователь {username} уже добавлен в чат {chat.name}"
             raise AlreadyMemberChatError(message)
         await self.chat_repo.add_member(self.session, chat_id, user.id, current_user.id)
         await self.session.commit()
-        await self.publisher.publish(
-            *[
-                NotificationCreate(
-                    body=f"Пользователь {current_user.username} добавил "
-                    f"{username} в чат {chat.name}",
-                    chat_id=chat_id,
-                    chat_name=chat.name,
-                    recipient_id=member.user_id,
-                ).model_dump(mode="json")
-                for member in chat.members
-            ]
+        message = (
+            f"Пользователь {current_user.username} добавил {username} в чат {chat.name}"
         )
-        return chat.name, user
+        await self.websocket_manager.chat_broadcast(
+            WebsocketEvent(
+                event=ChatEvent.joined_user,
+                payload=message,
+                details=ChatEventUserInfo(user=UserRead.model_validate(user)),
+            ),
+            chat_id,
+        )
+        if len(chat.members) > 1:
+            await self.publisher.publish(
+                *[
+                    NotificationCreate(
+                        body=message,
+                        chat_id=chat_id,
+                        chat_name=chat.name,
+                        recipient_id=member.user_id,
+                    ).model_dump(mode="json")
+                    for member in chat.members
+                    if member.user_id != current_user.id
+                ]
+            )
+        return message
 
     async def remove_member_from_chat(
         self, chat_id: uuid.UUID, user_id: int, current_user: UserRead
-    ) -> tuple[str, str]:
+    ) -> str:
         chat = await self._get_chat(chat_id, with_creator=True, with_members=True)
         if current_user.id != chat.creator.id:
             raise ForbiddenError(
                 "У вас нет прав на удаление пользователей из чата " + str(chat_id)
             )
         user = await self._get_user(user_id)
-        # if not await self.chat_repo.is_member(self.session, chat_id, user.id):
         if user.id not in [member.user.id for member in chat.members]:
             message = f"Пользователя с ID {user_id} нет в чате {chat.name}"
             raise AlreadyNotMemberChatError(message)
         await self.chat_repo.delete_member(self.session, chat_id, user.id)
         await self.session.commit()
-        await self.publisher.publish(
-            *[
-                NotificationCreate(
-                    body=f"Пользователь {user.username} удален из чата {chat.name}",
-                    chat_id=chat_id,
-                    chat_name=chat.name,
-                    recipient_id=member.user_id,
-                ).model_dump(mode="json")
-                for member in chat.members
-                if member.user_id != user_id
-            ]
+        message = f"Пользователь {user.username} удален из чата {chat.name}"
+        await self.websocket_manager.chat_broadcast(
+            WebsocketEvent(event=ChatEvent.left_user, payload=message, details=user_id),
+            chat_id,
         )
-        return chat.name, user.username
+        await self.websocket_manager.close_user_connections_to_chat(
+            chat_id, user_id, is_removed=True
+        )
+        if len(chat.members) > 1:
+            await self.publisher.publish(
+                *[
+                    NotificationCreate(
+                        body=message,
+                        chat_id=chat_id,
+                        chat_name=chat.name,
+                        recipient_id=member.user_id,
+                    ).model_dump(mode="json")
+                    for member in chat.members
+                    if member.user_id != user_id
+                ]
+            )
+        return message
 
     async def create_chat(self, creator_id: int, data: ChatCreate) -> Chat:
         chat_data = ChatCreateInDB(user_id=creator_id, **data.model_dump())
@@ -176,17 +199,19 @@ class ChatService:
             raise ForbiddenError("У вас нет прав на удаление чата " + str(chat_id))
         await self.chat_repo.delete_chat(self.session, chat)
         await self.session.commit()
-        await self.publisher.publish(
-            *[
-                NotificationCreate(
-                    body=f"Чат {chat.name} был удален",
-                    chat_id=chat_id,
-                    chat_name=chat.name,
-                    recipient_id=member.user_id,
-                ).model_dump(mode="json")
-                for member in chat.members
-            ]
-        )
+        if len(chat.members) > 1:
+            await self.publisher.publish(
+                *[
+                    NotificationCreate(
+                        body=f"Чат {chat.name} был удален",
+                        chat_id=chat_id,
+                        chat_name=chat.name,
+                        recipient_id=member.user_id,
+                    ).model_dump(mode="json")
+                    for member in chat.members
+                    if member.user_id != current_user_id
+                ]
+            )
         await self.chat_broker.delete_chat(chat_id)
         return chat
 
@@ -201,18 +226,29 @@ class ChatService:
             message = f"Пользователь {current_user.username} покинул чат {chat.name}"
             await self.chat_repo.delete_member(self.session, chat_id, current_user.id)
         await self.session.commit()
-        await self.publisher.publish(
-            *[
-                NotificationCreate(
-                    body=message,
-                    chat_id=chat_id,
-                    chat_name=chat.name,
-                    recipient_id=member.user_id,
-                ).model_dump(mode="json")
-                for member in chat.members
-            ]
+        await self.websocket_manager.close_user_connections_to_chat(
+            chat_id, current_user.id, is_removed=True
         )
-        return chat.name
+        await self.websocket_manager.chat_broadcast(
+            WebsocketEvent(
+                event=ChatEvent.left_user, payload=message, details=current_user.id
+            ),
+            chat_id,
+        )
+        if len(chat.members) > 1:
+            await self.publisher.publish(
+                *[
+                    NotificationCreate(
+                        body=message,
+                        chat_id=chat_id,
+                        chat_name=chat.name,
+                        recipient_id=member.user_id,
+                    ).model_dump(mode="json")
+                    for member in chat.members
+                    if member.user_id != current_user.id
+                ]
+            )
+        return message
 
     async def get_user_chats(self, user_id: int) -> list[ChatRead]:
         chats = await self.chat_repo.get_chats_by_user_id_with_last_message(
@@ -253,6 +289,13 @@ class ChatService:
                 self.session, update_messages_ids
             )
             await self.session.commit()
+            await self.websocket_manager.chat_broadcast(
+                WebsocketEvent(
+                    event=ChatEvent.read_message,
+                    payload=update_messages_ids,
+                ),
+                chat_id,
+            )
 
         messages = [
             MessageReadWithSender.model_validate(message).model_copy(
@@ -292,6 +335,13 @@ class ChatService:
                 self.session, update_messages_ids
             )
             await self.session.commit()
+            await self.websocket_manager.chat_broadcast(
+                WebsocketEvent(
+                    event=ChatEvent.read_message,
+                    payload=update_messages_ids,
+                ),
+                chat_id,
+            )
 
         messages = [
             MessageReadWithSender.model_validate(message).model_copy(
@@ -306,7 +356,6 @@ class ChatService:
         self, chat_id: uuid.UUID, current_user_id: int
     ) -> tuple[str, str]:
         chat = await self._get_chat(chat_id, with_members=True)
-        # if not await self.chat_repo.is_member(self.session, chat_id, current_user_id):
         if current_user_id not in [member.user.id for member in chat.members]:
             raise ForbiddenError(
                 "У вас нет прав на добавление участника в чат " + str(chat_id)
@@ -330,20 +379,34 @@ class ChatService:
             self.session, chat.id, current_user.id, invited_user.id
         )
         await self.session.commit()
-
-        await self.publisher.publish(
-            *[
-                NotificationCreate(
-                    body=f"Пользователь {current_user.username} "
-                    f"присоединился к чату {chat.name}",
-                    chat_id=chat.id,
-                    chat_name=chat.name,
-                    recipient_id=member.user_id,
-                ).model_dump(mode="json")
-                for member in chat.members
-            ]
+        message = (
+            f"Пользователь {current_user.username} "
+            f"присоединился к чату {chat.name} "
+            f"по приглашению {invited_user.username}"
         )
-        return chat, invited_user.username
+        await self.websocket_manager.chat_broadcast(
+            WebsocketEvent(
+                event=ChatEvent.joined_user,
+                payload=message,
+                details=ChatEventUserInfo(user=current_user),
+            ),
+            chat.id,
+        )
+        if len(chat.members) > 1:
+            await self.publisher.publish(
+                *[
+                    NotificationCreate(
+                        body=f"Пользователь {current_user.username} "
+                        f"присоединился к чату {chat.name}",
+                        chat_id=chat.id,
+                        chat_name=chat.name,
+                        recipient_id=member.user_id,
+                    ).model_dump(mode="json")
+                    for member in chat.members
+                    if member.user_id != current_user.id
+                ]
+            )
+        return chat, message
 
     async def is_member(self, chat_id: uuid.UUID, current_user_id: int) -> bool:
         if not await self.chat_repo.is_member(self.session, chat_id, current_user_id):

@@ -1,10 +1,9 @@
 from dataclasses import dataclass
-from functools import cache
 from uuid import UUID
 
 from core.config import settings
-from core.redis import get_redis
 from fastapi import WebSocket
+from redis.asyncio import Redis
 
 from domains.chats.broker import ChatBroker
 from domains.chats.schemas import ChatEvent, ClosedConnectionEvent, WebsocketEvent
@@ -17,7 +16,7 @@ class ChatConnection:
 
 
 class ConnectionManager:
-    def __init__(self) -> None:
+    def __init__(self, broker: Redis) -> None:
         pass
 
     async def connect_to_chat(
@@ -55,10 +54,10 @@ class ConnectionManager:
 
 
 class WebSocketConnectionManager(ConnectionManager):
-    def __init__(self) -> None:
-        super().__init__()
+    def __init__(self, broker: Redis) -> None:
+        super().__init__(broker)
         self.chat_connections: dict[UUID, list[ChatConnection]] = {}
-        self.broker = ChatBroker(get_redis())
+        self.broker = ChatBroker(broker)
 
     async def connect_to_chat(
         self, websocket: WebSocket, chat_id: UUID, user_id: int
@@ -158,8 +157,3 @@ class WebSocketConnectionManager(ConnectionManager):
             for connection in chat_connection:
                 await connection.websocket.close()
         self.chat_connections.clear()
-
-
-@cache
-def get_websocket_manager() -> ConnectionManager:
-    return WebSocketConnectionManager()

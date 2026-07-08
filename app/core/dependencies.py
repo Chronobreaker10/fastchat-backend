@@ -3,10 +3,6 @@ from __future__ import annotations
 from functools import cache
 from typing import Annotated
 
-from domains.chats.websocket_manager import (
-    WebSocketConnectionManager,
-    get_websocket_manager,
-)
 from fastapi import Depends
 from faststream.kafka import KafkaBroker
 from faststream.kafka.publisher import BatchPublisher, DefaultPublisher
@@ -28,7 +24,5 @@ def get_kafka_publisher(
 
 SessionDep = Annotated[AsyncSession, Depends(db_helper.get_session)]
 RedisDep = Annotated[Redis, Depends(get_redis)]
-WebSocketManagerDep = Annotated[
-    WebSocketConnectionManager, Depends(get_websocket_manager)
-]
+
 KafkaPublisherDep = Annotated[BatchPublisher, Depends(get_kafka_publisher)]

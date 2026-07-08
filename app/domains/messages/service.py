@@ -56,17 +56,19 @@ class MessageService:
         message = await self.message_repo.create(self.session, data)
         await self.session.commit()
         members = await self.chat_repo.get_members_ids(self.session, data.chat_id)
-        await self.publisher.publish(
-            *[
-                NotificationCreate(
-                    body="Новое сообщение в чате",
-                    chat_id=data.chat_id,
-                    chat_name=chat.name,
-                    recipient_id=member,
-                ).model_dump(mode="json")
-                for member in members
-            ]
-        )
+        if len(members) > 1:
+            await self.publisher.publish(
+                *[
+                    NotificationCreate(
+                        body="Новое сообщение в чате",
+                        chat_id=data.chat_id,
+                        chat_name=chat.name,
+                        recipient_id=member,
+                    ).model_dump(mode="json")
+                    for member in members
+                    if member != current_user_id
+                ]
+            )
         return MessageRead.model_validate(message).model_copy(
             update={"text": decrypt_message(message.text)}
         )

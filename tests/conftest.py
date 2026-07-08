@@ -17,9 +17,9 @@ from domains.auth.session_store import (
     SessionStore,
 )
 from domains.chats.broker import ChatBroker
-from domains.chats.dependencies import get_chat_broker
+from domains.chats.dependencies import get_chat_broker, get_websocket_manager
 from domains.chats.models import Chat, ChatUser
-from domains.chats.websocket_manager import ConnectionManager, get_websocket_manager
+from domains.chats.websocket_manager import ConnectionManager
 from domains.messages.models import Message
 from domains.users.models import User
 from faker import Faker
@@ -78,7 +78,7 @@ async def test_client(
         return session
 
     def get_override_websocket_manager() -> ConnectionManager:
-        return ConnectionManager()
+        return ConnectionManager(mock_chat_broker)
 
     app.dependency_overrides[db_helper.get_session] = get_override_session
     app.dependency_overrides[get_websocket_manager] = get_override_websocket_manager

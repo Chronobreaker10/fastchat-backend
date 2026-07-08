@@ -17,6 +17,7 @@ from domains.users.schemas import UserRead
 
 class ChatEvent(StrEnum):
     sent_message = "sent_message"
+    read_message = "read_message"
     left_user = "left_user"
     joined_user = "joined_user"
     message_updated = "message_updated"
@@ -137,7 +138,7 @@ class ChatEventUserInfo(BaseModel):
 
 class WebsocketEvent(BaseModel):
     event: ChatEvent
-    payload: MessagePayload | str | int
+    payload: MessagePayload | str | int | list[int]
     details: ChatEventUserInfo | int | None = None
 
 
