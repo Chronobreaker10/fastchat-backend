@@ -51,7 +51,7 @@ class MessageService:
             raise ForbiddenError(message)
         encrypted_data = data.model_copy(update={"text": encrypt_message(data.text)})
         data = MessageCreateInDB(
-            **encrypted_data.model_dump(), sender_id=current_user_id
+            **encrypted_data.model_dump(exclude={"temp_id"}), sender_id=current_user_id
         )
         message = await self.message_repo.create(self.session, data)
         await self.session.commit()

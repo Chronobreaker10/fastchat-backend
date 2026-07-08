@@ -8,6 +8,7 @@ from typing import Annotated
 from pydantic import BaseModel, ConfigDict, Field
 
 from domains.messages.schemas import (
+    MessagePayload,
     MessageReadWithSender,
     MessageReadWithSenderUsername,
 )
@@ -136,7 +137,7 @@ class ChatEventUserInfo(BaseModel):
 
 class WebsocketEvent(BaseModel):
     event: ChatEvent
-    payload: MessageReadWithSender | str | int
+    payload: MessagePayload | str | int
     details: ChatEventUserInfo | int | None = None
 
 

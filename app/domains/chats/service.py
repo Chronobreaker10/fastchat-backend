@@ -25,6 +25,7 @@ from domains.chats.schemas import (
     ChatWithMembers,
     ChatWithMessages,
 )
+from domains.messages.models import MessageStatus
 from domains.messages.repository import MessageRepository
 from domains.messages.schemas import (
     MessageReadWithSender,
@@ -241,6 +242,18 @@ class ChatService:
         messages = await self.message_repo.get_messages_by_chat_id(
             self.session, chat_id
         )
+        update_messages_ids = [
+            message.id
+            for message in messages
+            if message.message_status == MessageStatus.DELIVERED
+            and message.sender_id != current_user_id
+        ]
+        if len(update_messages_ids) > 0:
+            await self.message_repo.update_messages_status(
+                self.session, update_messages_ids
+            )
+            await self.session.commit()
+
         messages = [
             MessageReadWithSender.model_validate(message).model_copy(
                 update={"text": decrypt_message(message.text)}
@@ -268,6 +281,18 @@ class ChatService:
         messages = await self.message_repo.get_messages_by_chat_id(
             self.session, chat_id, pagination
         )
+        update_messages_ids = [
+            message.id
+            for message in messages
+            if message.message_status == MessageStatus.DELIVERED
+            and message.sender_id != current_user_id
+        ]
+        if len(update_messages_ids) > 0:
+            await self.message_repo.update_messages_status(
+                self.session, update_messages_ids
+            )
+            await self.session.commit()
+
         messages = [
             MessageReadWithSender.model_validate(message).model_copy(
                 update={"text": decrypt_message(message.text)}

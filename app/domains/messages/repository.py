@@ -6,11 +6,11 @@ from collections.abc import Sequence
 from core.base.repository import BaseRepository
 from core.base.schemas import PaginationParams
 from core.config import settings
-from sqlalchemy import func, select, tuple_
+from sqlalchemy import func, select, tuple_, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 
-from domains.messages.models import Message
+from domains.messages.models import Message, MessageStatus
 from domains.messages.schemas import MessageUpdate
 
 
@@ -64,6 +64,17 @@ class MessageRepository(BaseRepository[Message]):
         await session.flush()
         await session.refresh(message)
         return message
+
+    @staticmethod
+    async def update_messages_status(
+        session: AsyncSession,
+        messages_ids: list[int],
+    ) -> None:
+        await session.execute(
+            update(Message)
+            .where(Message.id.in_(messages_ids))
+            .values(message_status=MessageStatus.READ)
+        )
 
     @staticmethod
     async def delete_message(session: AsyncSession, message: Message) -> None:

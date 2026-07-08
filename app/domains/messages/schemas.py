@@ -1,9 +1,12 @@
+from __future__ import annotations
+
 import uuid
 from datetime import datetime
 from typing import Annotated
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from domains.messages.models import MessageStatus
 from domains.users.schemas import UserRead
 
 
@@ -23,18 +26,31 @@ class MessageCreate(MessageBase):
             description="Идентификатор чата, в который отправлено сообщение",
         ),
     ]
+    temp_id: Annotated[
+        uuid.UUID | None, Field(title="Временный ID для обновления статуса сообщения")
+    ] = None
 
 
 class MessageUpdate(MessageBase):
     pass
 
 
-class MessageCreateInDB(MessageCreate):
+class MessageCreateInDB(MessageBase):
+    chat_id: Annotated[
+        uuid.UUID,
+        Field(
+            title="ID чата",
+            description="Идентификатор чата, в который отправлено сообщение",
+        ),
+    ]
     sender_id: Annotated[int, Field(ge=1, title="ID отправителя сообщения")]
 
 
 class MessageRead(MessageCreateInDB):
     id: Annotated[int, Field(ge=1, title="ID сообщения")]
+    message_status: Annotated[MessageStatus, Field(title="Статус сообщения")] = (
+        MessageStatus.DELIVERED
+    )
     created_at: Annotated[
         datetime,
         Field(title="Время отправки сообщения"),
@@ -55,3 +71,10 @@ class MessageReadWithSenderUsername(MessageRead):
             description="Имя отправителя",
         ),
     ]
+
+
+class MessagePayload(BaseModel):
+    message: Annotated[MessageReadWithSender, Field(title="Новое сообщение")]
+    temp_id: Annotated[
+        uuid.UUID | None, Field(title="Временный ID для обновления статуса сообщения")
+    ] = None

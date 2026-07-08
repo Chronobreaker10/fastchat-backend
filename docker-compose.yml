@@ -117,22 +117,6 @@ services:
     networks:
       - fastchat-net
 
-  reverse-proxy:
-    image: nginx:1.31.2
-    container_name: fastchat_proxy
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - ./nginx.conf:/etc/nginx/nginx.conf
-      - ./certs:/certs
-      - ./dist:/usr/share/nginx/html
-    depends_on:
-      fastapi:
-        condition: service_healthy
-    networks:
-      - fastchat-net
-
 volumes:
   pgdata:
     driver: local
