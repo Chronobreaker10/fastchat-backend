@@ -18,6 +18,7 @@ class ChatEvent(StrEnum):
     sent_message = "sent_message"
     left_user = "left_user"
     joined_user = "joined_user"
+    message_updated = "message_updated"
     message_deleted = "message_deleted"
     connect_user = "connect_user"
     disconnect_user = "disconnect_user"
@@ -69,14 +70,6 @@ class ChatRead(ChatBase):
             title="ID чата", description="Уникальный идентификатор чата в формате UUID"
         ),
     ]
-    # creator: Annotated[
-    #     UserRead,
-    #     Field(title="Создатель чата", description="Создавший этот чат пользователь"),
-    # ]
-    # members: Annotated[
-    #     list[ChatUser],
-    #     Field(title="Участники чата", description="Список участников чата"),
-    # ]
     created_at: Annotated[
         datetime,
         Field(title="Время создания чата"),

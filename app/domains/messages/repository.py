@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 
 from domains.messages.models import Message
+from domains.messages.schemas import MessageUpdate
 
 
 class MessageRepository(BaseRepository[Message]):
@@ -51,6 +52,18 @@ class MessageRepository(BaseRepository[Message]):
         query = select(func.count(Message.id)).where(Message.chat_id == chat_id)
         result = await session.execute(query)
         return result.scalar_one()
+
+    @staticmethod
+    async def update_message(
+        session: AsyncSession,
+        message: Message,
+        message_data: MessageUpdate,
+    ) -> Message:
+        for key, value in message_data.model_dump(exclude_unset=True).items():
+            setattr(message, key, value)
+        await session.flush()
+        await session.refresh(message)
+        return message
 
     @staticmethod
     async def delete_message(session: AsyncSession, message: Message) -> None:

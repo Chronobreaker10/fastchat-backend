@@ -24,7 +24,7 @@ class ApiConfig(BaseModel):
 class CorsConfig(BaseModel):
     allowed_origins: list[str] = Field(
         default_factory=lambda: [
-            # "http://localhost:5173",
+            "http://localhost:5173",
             # "http://localhost:8080",
             # "http://localhost:8081",
             # "http://localhost:80",
@@ -36,7 +36,7 @@ class CorsConfig(BaseModel):
 
 
 class RunConfig(BaseModel):
-    scheme: Literal["http", "https"] = "https"
+    scheme: Literal["http", "https"] = "http"
     host: str = "localhost"
     port: int = 8000
 

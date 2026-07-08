@@ -110,6 +110,7 @@ class ChatService:
                     body=f"Пользователь {current_user.username} добавил "
                     f"{username} в чат {chat.name}",
                     chat_id=chat_id,
+                    chat_name=chat.name,
                     recipient_id=member.user_id,
                 ).model_dump(mode="json")
                 for member in chat.members
@@ -137,6 +138,7 @@ class ChatService:
                 NotificationCreate(
                     body=f"Пользователь {user.username} удален из чата {chat.name}",
                     chat_id=chat_id,
+                    chat_name=chat.name,
                     recipient_id=member.user_id,
                 ).model_dump(mode="json")
                 for member in chat.members
@@ -178,6 +180,7 @@ class ChatService:
                 NotificationCreate(
                     body=f"Чат {chat.name} был удален",
                     chat_id=chat_id,
+                    chat_name=chat.name,
                     recipient_id=member.user_id,
                 ).model_dump(mode="json")
                 for member in chat.members
@@ -202,6 +205,7 @@ class ChatService:
                 NotificationCreate(
                     body=message,
                     chat_id=chat_id,
+                    chat_name=chat.name,
                     recipient_id=member.user_id,
                 ).model_dump(mode="json")
                 for member in chat.members
@@ -308,6 +312,7 @@ class ChatService:
                     body=f"Пользователь {current_user.username} "
                     f"присоединился к чату {chat.name}",
                     chat_id=chat.id,
+                    chat_name=chat.name,
                     recipient_id=member.user_id,
                 ).model_dump(mode="json")
                 for member in chat.members

@@ -3,7 +3,7 @@ set shell := ["powershell", "-c"]
 @a_default:
     just --list
 
-@run port="8000":
+@run port="80":
     uv run fastapi run --port {{port}}
 
 @lint:

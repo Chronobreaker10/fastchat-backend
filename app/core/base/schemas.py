@@ -1,13 +1,15 @@
 from datetime import UTC, datetime
-from typing import Annotated
+from typing import Annotated, Any
 from uuid import UUID
 
 from pydantic import BaseModel, Field, field_serializer
 
 
 class MessageResponse(BaseModel):
-    message: str
-    details: dict
+    message: Annotated[
+        str, Field(title="Сообщение ответа", min_length=1, max_length=500)
+    ]
+    details: Annotated[dict[str, Any], Field(title="Детали ответа")]
 
 
 class PaginationParams(BaseModel):
@@ -26,6 +28,10 @@ class NotificationCreate(BaseModel):
         ),
     ]
     chat_id: Annotated[UUID, Field(title="Идентификатор связанного чата")]
+    chat_name: Annotated[
+        str,
+        Field(min_length=3, max_length=100, title="Имя чата", description="Имя чата"),
+    ]
     recipient_id: Annotated[int, Field(ge=1, title="Идентификатор получателя")]
 
     @field_serializer("chat_id")

@@ -13,6 +13,9 @@ class MessageBase(BaseModel):
         str,
         Field(min_length=1, max_length=500, title="Текст сообщения"),
     ]
+
+
+class MessageCreate(MessageBase):
     chat_id: Annotated[
         uuid.UUID,
         Field(
@@ -22,7 +25,7 @@ class MessageBase(BaseModel):
     ]
 
 
-class MessageCreate(MessageBase):
+class MessageUpdate(MessageBase):
     pass
 
 
