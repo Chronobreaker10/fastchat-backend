@@ -26,6 +26,10 @@ class ChatEvent(StrEnum):
     disconnect_user = "disconnect_user"
 
 
+class UserAction(StrEnum):
+    message_read = "message_read"
+
+
 class ChatBase(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     name: Annotated[
@@ -151,3 +155,12 @@ class ClosedConnectionEvent(BaseModel):
     user_id: int
     chat_id: uuid.UUID
     removed: bool = False
+
+
+class UserEvent(BaseModel):
+    action: Annotated[UserAction, Field(title="Действие пользователя")]
+    payload: Annotated[ReadMessageEvent, Field(title="Данные события")]
+
+
+class ReadMessageEvent(BaseModel):
+    message_id: Annotated[int, Field(ge=1, title="ID прочитанного сообщения")]

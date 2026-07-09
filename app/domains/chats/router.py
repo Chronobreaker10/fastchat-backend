@@ -20,7 +20,10 @@ from domains.chats.schemas import (
     ChatUpdate,
     ChatWithMessages,
     InvitesResponse,
+    UserAction,
+    UserEvent,
 )
+from domains.messages.dependencies import MessageServiceDep
 from domains.messages.schemas import MessageReadWithSender
 
 router = APIRouter(
@@ -209,6 +212,7 @@ async def receive_messages(
     chat_id: ChatUUIDDep,
     current_user: CurrentUserDep,
     service: ChatServiceDep,
+    message_service: MessageServiceDep,
     websocket_manager: WebSocketManagerDep,
 ) -> None:
     if await service.is_member(chat_id, current_user.id):
@@ -217,7 +221,12 @@ async def receive_messages(
         await websocket_manager.connect_to_chat(websocket, chat_id, current_user.id)
         try:
             while True:
-                await websocket.receive_json()
+                data = await websocket.receive_json()
+                event = UserEvent(**data)
+                if event.action == UserAction.message_read:
+                    await message_service.read_message(
+                        event.payload.message_id, current_user.id
+                    )
         except WebSocketDisconnect:
             await websocket_manager.close_connection(
                 chat_id, current_user.id, websocket, closed=True

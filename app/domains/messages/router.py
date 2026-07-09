@@ -1,17 +1,12 @@
-import asyncio
 from typing import Annotated
 
 from core.base.schemas import MessageResponse
 from fastapi import APIRouter, Body, Path, status
 
 from domains.auth.dependencies import CurrentUserDep
-from domains.chats.dependencies import WebSocketManagerDep
-from domains.chats.schemas import ChatEvent, WebsocketEvent
 from domains.messages.dependencies import MessageServiceDep
 from domains.messages.schemas import (
     MessageCreate,
-    MessagePayload,
-    MessageReadWithSender,
     MessageUpdate,
 )
 
@@ -31,22 +26,8 @@ async def send_message(
     current_user: CurrentUserDep,
     service: MessageServiceDep,
     data: MessageCreate,
-    websocket_manager: WebSocketManagerDep,
 ) -> MessageResponse:
-    await asyncio.sleep(2)
-    message = await service.send_message(data, current_user.id)
-    await websocket_manager.chat_broadcast(
-        WebsocketEvent(
-            event=ChatEvent.sent_message,
-            payload=MessagePayload(
-                message=MessageReadWithSender(
-                    **message.model_dump(), sender=current_user
-                ),
-                temp_id=data.temp_id,
-            ),
-        ),
-        data.chat_id,
-    )
+    message = await service.send_message(data, current_user)
     return MessageResponse(
         message="Сообщение успешно отправлено", details={"message": message}
     )
@@ -63,20 +44,8 @@ async def update_message(
     service: MessageServiceDep,
     message_id: Annotated[int, Path(title="ID сообщения")],
     data: Annotated[MessageUpdate, Body()],
-    websocket_manager: WebSocketManagerDep,
 ) -> MessageResponse:
-    message = await service.update_message(message_id, data, current_user.id)
-    await websocket_manager.chat_broadcast(
-        WebsocketEvent(
-            event=ChatEvent.message_updated,
-            payload=MessagePayload(
-                message=MessageReadWithSender(
-                    **message.model_dump(), sender=current_user
-                )
-            ),
-        ),
-        message.chat_id,
-    )
+    message = await service.update_message(message_id, data, current_user)
     return MessageResponse(
         message="Сообщение успешно изменено", details={"message": message}
     )
@@ -89,13 +58,8 @@ async def delete_message(
     current_user: CurrentUserDep,
     service: MessageServiceDep,
     message_id: Annotated[int, Path(title="ID сообщения")],
-    websocket_manager: WebSocketManagerDep,
 ) -> MessageResponse:
     message = await service.delete_message(message_id, current_user.id)
-    await websocket_manager.chat_broadcast(
-        WebsocketEvent(event=ChatEvent.message_deleted, payload=message.id),
-        message.chat_id,
-    )
     return MessageResponse(
         message="Сообщение успешно удалено", details={"message_id": message.id}
     )
