@@ -4,9 +4,10 @@ import uuid
 from datetime import datetime
 from typing import Annotated
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_serializer
 
 from domains.messages.models import MessageStatus
+from domains.shared.utils import get_msc_dt
 from domains.users.schemas import UserRead
 
 
@@ -55,6 +56,10 @@ class MessageRead(MessageCreateInDB):
         datetime,
         Field(title="Время отправки сообщения"),
     ]
+
+    @field_serializer("created_at")
+    def created_at_to_msc_dt(self, v: datetime) -> datetime:
+        return get_msc_dt(v.replace(microsecond=0))
 
 
 class MessageReadWithSender(MessageRead):

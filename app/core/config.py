@@ -36,7 +36,7 @@ class CorsConfig(BaseModel):
 
 
 class RunConfig(BaseModel):
-    scheme: Literal["http", "https"] = "http"
+    scheme: Literal["http", "https"]
     host: str = "localhost"
     port: int = 8000
 
@@ -101,7 +101,7 @@ class Settings(BaseSettings):
     default_limit: int = 10
     websockets_limit_per_user: int = 20
     cors: CorsConfig = Field(default_factory=CorsConfig)
-    run_config: RunConfig = Field(default_factory=RunConfig)
+    run_config: RunConfig
     api_config: ApiConfig = Field(default_factory=ApiConfig)
     chat_broker_config: ChatBrokerConfig = Field(default_factory=ChatBrokerConfig)
     kafka: KafkaConfig = Field(default_factory=KafkaConfig)
