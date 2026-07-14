@@ -55,16 +55,18 @@
 
 ## ✨ Запуск проекта
 
-Генерация закрытого ключа: 
+Генерация пары ключей: 
 ```bash
 openssl genrsa -out private.pem 2048
-mv ./private.pem ./secret-keys/
+openssl rsa -in private.pem -pubout -out public.pem
+
 ```
 
-Генерация открытого ключа из приватного:
+Создание папки для хранения ключей:
  ``` bash  
-openssl rsa -in private.pem -pubout -out public.pem
-mv ./public.pem ./secret-keys/
+mkdir secret_keys
+mv ./private.pem ./secret_keys/
+mv ./public.pem ./secret_keys/
 ```
 
 Создание docker-сети:
